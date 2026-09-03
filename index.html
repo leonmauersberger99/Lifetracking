@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Logbuch">
+<meta name="theme-color" content="#1E2A28">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-512.png">
+<title>Logbuch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  :root{
+    --paper: #ECEEE6;
+    --paper-raised: #F5F6F1;
+    --ink: #1E2A28;
+    --ink-soft: #55625D;
+    --rule: #C7CDBE;
+    --teal: #2E6E64;
+    --teal-soft: #D9E6E2;
+    --plum: #8B5566;
+    --plum-soft: #EBDCE1;
+    --amber: #B0752B;
+    --amber-soft: #F1E2C9;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Work Sans', sans-serif;
+    font-size:15px;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3, .display{
+    font-family:'Fraunces', serif;
+    font-weight:500;
+    letter-spacing:-0.01em;
+    margin:0;
+  }
+  #app{
+    max-width:640px;
+    margin:0 auto;
+    padding:28px 20px 96px;
+    min-height:100vh;
+  }
+  .page-head{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    margin-bottom:22px;
+    border-bottom:1px solid var(--rule);
+    padding-bottom:14px;
+  }
+  .page-head h1{font-size:26px;}
+  .page-head .today{font-size:13px;color:var(--ink-soft);}
+  .tabbar{
+    display:flex;
+    gap:4px;
+    background:var(--paper-raised);
+    border:1px solid var(--rule);
+    border-radius:10px;
+    padding:4px;
+    margin-bottom:26px;
+  }
+  .tabbar button{
+    flex:1;
+    padding:9px 6px;
+    border:none;
+    background:transparent;
+    color:var(--ink-soft);
+    font-family:'Work Sans', sans-serif;
+    font-size:13.5px;
+    font-weight:500;
+    border-radius:7px;
+    cursor:pointer;
+  }
+  .tabbar button.active{
+    background:var(--ink);
+    color:var(--paper);
+  }
+  section.view{display:none;}
+  section.view.active{display:block;}
+  .card{
+    background:var(--paper-raised);
+    border:1px solid var(--rule);
+    border-radius:12px;
+    padding:18px;
+    margin-bottom:18px;
+  }
+  .card h2{font-size:17px;margin-bottom:12px;}
+  .hint{font-size:13px;color:var(--ink-soft);margin:0 0 12px;}
+  .mic-row{display:flex;gap:10px;align-items:center;margin-bottom:12px;}
+  #micBtn{
+    width:56px;height:56px;border-radius:50%;
+    border:1px solid var(--rule);
+    background:var(--teal);
+    color:var(--paper);
+    font-size:22px;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;flex-shrink:0;
+  }
+  #micBtn.recording{background:var(--amber);}
+  #micBtn:disabled{background:var(--rule);cursor:not-allowed;}
+  #micStatus{font-size:13px;color:var(--ink-soft);}
+  textarea, input[type=text], input[type=number], input[type=date], input[type=time], select{
+    width:100%;
+    font-family:'Work Sans', sans-serif;
+    font-size:14.5px;
+    color:var(--ink);
+    background:#fff;
+    border:1px solid var(--rule);
+    border-radius:8px;
+    padding:9px 10px;
+  }
+  textarea{resize:vertical;min-height:56px;}
+  label{display:block;font-size:12.5px;color:var(--ink-soft);margin-bottom:4px;margin-top:10px;}
+  label:first-child{margin-top:0;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .btn{
+    display:inline-block;
+    font-family:'Work Sans', sans-serif;
+    font-size:14px;
+    font-weight:500;
+    padding:9px 16px;
+    border-radius:8px;
+    border:1px solid var(--ink);
+    background:var(--ink);
+    color:var(--paper);
+    cursor:pointer;
+    text-decoration:none;
+  }
+  .btn.secondary{background:transparent;color:var(--ink);}
+  .btn.small{padding:5px 10px;font-size:12.5px;}
+  .btn-row{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;}
+  .draft-box{
+    border:1px dashed var(--rule);
+    border-radius:10px;
+    padding:14px;
+    margin-top:14px;
+    background:#fff;
+  }
+  .draft-box .tag{
+    display:inline-block;font-size:12px;padding:2px 8px;border-radius:20px;margin-bottom:8px;
+  }
+  .tag.workout{background:var(--teal-soft);color:var(--teal);}
+  .tag.social{background:var(--plum-soft);color:var(--plum);}
+  .entry-list{list-style:none;margin:0;padding:0;}
+  .entry-list li{
+    display:flex;justify-content:space-between;gap:10px;
+    padding:10px 0;border-bottom:1px solid var(--rule);
+    font-size:14px;
+  }
+  .entry-list li:last-child{border-bottom:none;}
+  .entry-list .meta{color:var(--ink-soft);font-size:12.5px;}
+  .plan-day{border-bottom:1px solid var(--rule);padding:14px 0;}
+  .plan-day:last-child{border-bottom:none;}
+  .plan-day .day-name{font-family:'Fraunces', serif;font-size:16px;margin-bottom:8px;}
+  .plan-item{
+    display:flex;justify-content:space-between;align-items:center;
+    background:var(--paper);border:1px solid var(--rule);border-radius:8px;
+    padding:8px 10px;margin-bottom:6px;font-size:13.5px;
+  }
+  .plan-item .del{cursor:pointer;color:var(--ink-soft);font-size:16px;border:none;background:none;}
+  .since-grid{display:flex;flex-direction:column;gap:8px;}
+  .since-row{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:9px 12px;border-radius:8px;background:var(--paper);border:1px solid var(--rule);
+  }
+  .since-row .days{font-family:'Fraunces', serif;font-size:19px;}
+  .since-row .days.ok{color:var(--teal);}
+  .since-row .days.mid{color:var(--ink);}
+  .since-row .days.overdue{color:var(--amber);}
+  .stat-line{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--rule);font-size:14px;}
+  .stat-line:last-child{border-bottom:none;}
+  .stat-line b{font-family:'Fraunces', serif;font-weight:500;}
+  .empty{color:var(--ink-soft);font-size:13.5px;font-style:italic;padding:6px 0;}
+  a.cal-link{font-size:12.5px;color:var(--teal);text-decoration:underline;}
+  @media (max-width:420px){
+    .row2{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="page-head">
+    <h1>Logbuch</h1>
+    <div class="today" id="todayLabel"></div>
+  </div>
+
+  <div class="tabbar">
+    <button data-tab="log" class="active">Eintragen</button>
+    <button data-tab="plan">Wochenplan</button>
+    <button data-tab="overview">Übersicht</button>
+  </div>
+
+  <section class="view active" id="view-log">
+    <div class="card">
+      <h2>Was hast du gemacht?</h2>
+      <p class="hint">Per Mikrofon sprechen oder tippen (auf dem Handy geht auch das Mikrofon der Tastatur) — z. B. „eine Stunde Fahrrad gefahren" oder „mit Papa 30 Minuten telefoniert".</p>
+      <div class="mic-row">
+        <button id="micBtn" title="Aufnahme starten">🎤</button>
+        <span id="micStatus">Spracherkennung bereit</span>
+      </div>
+      <textarea id="voiceText" placeholder="…oder hier eintippen"></textarea>
+      <div class="btn-row">
+        <button class="btn" id="parseBtn">Eintrag erkennen</button>
+        <button class="btn secondary" id="manualBtn">Manuell eintragen</button>
+      </div>
+      <div id="draftArea"></div>
+    </div>
+
+    <div class="card">
+      <h2>Zuletzt eingetragen</h2>
+      <ul class="entry-list" id="recentList"></ul>
+    </div>
+  </section>
+
+  <section class="view" id="view-plan">
+    <div class="card">
+      <h2>Wochenplan</h2>
+      <p class="hint">Trainings und Kontakte, die sich wiederholen sollen. Aus dem Plan lassen sich Google-Kalender-Einträge für die aktuelle Woche erzeugen.</p>
+      <div id="planDays"></div>
+      <div class="btn-row">
+        <button class="btn secondary" id="addPlanItemBtn">+ Plan-Eintrag hinzufügen</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Google Kalender</h2>
+      <p class="hint" id="gSetupHint">Einmalig einrichten: eigene Client-ID aus der Google Cloud Console hier eintragen (siehe Anleitung im Chat), dann verbinden.</p>
+      <label>Google Client-ID</label>
+      <input type="text" id="gClientId" placeholder="xxxxxxxx.apps.googleusercontent.com">
+      <div class="btn-row">
+        <button class="btn secondary" id="gSaveIdBtn">Client-ID speichern</button>
+        <button class="btn" id="gConnectBtn">Mit Google verbinden</button>
+      </div>
+      <p class="hint" id="gConnStatus" style="margin-top:10px;">Noch nicht verbunden</p>
+    </div>
+
+    <div class="card">
+      <h2>Diese Woche in den Kalender</h2>
+      <p class="hint">Mit Verbindung: ein Klick trägt die ganze Woche direkt ein. Ohne Verbindung: pro Termin ein Link zum manuellen Bestätigen.</p>
+      <div class="btn-row">
+        <button class="btn" id="gSyncWeekBtn">Diese Woche synchronisieren</button>
+      </div>
+      <div id="calendarLinks" style="margin-top:12px;"></div>
+    </div>
+  </section>
+
+  <section class="view" id="view-overview">
+    <div class="card">
+      <h2>Wie lange ist es her?</h2>
+      <div class="since-grid" id="sinceGrid"></div>
+    </div>
+    <div class="card">
+      <h2>Diese Woche</h2>
+      <div id="weekStats"></div>
+    </div>
+    <div class="card">
+      <h2>Dieser Monat</h2>
+      <div id="monthStats"></div>
+    </div>
+  </section>
+</div>
+
+<script>
+const WEEKDAYS = ['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag'];
+let state = { logs: [], plan: [] };
+let editingDraft = null;
+
+// ---------- persistence ----------
+// Läuft die Seite innerhalb von Claude, wird window.storage genutzt;
+// läuft sie selbst gehostet (z. B. GitHub Pages), wird echtes localStorage genutzt.
+async function storageGet(key){
+  if(window.storage){
+    try{ const r = await window.storage.get(key, false); return r ? r.value : null; }
+    catch(e){ return null; }
+  }
+  return localStorage.getItem(key);
+}
+async function storageSet(key, value){
+  if(window.storage){
+    try{ await window.storage.set(key, value, false); return; }
+    catch(e){ console.error('Speichern fehlgeschlagen', e); return; }
+  }
+  localStorage.setItem(key, value);
+}
+async function loadState(){
+  try{
+    const raw = await storageGet('lebenslog-data');
+    if(raw){ state = JSON.parse(raw); }
+  }catch(e){ /* no data yet */ }
+  if(!state.synced) state.synced = {};
+  const savedClientId = await storageGet('google-client-id');
+  if(savedClientId){ document.getElementById('gClientId').value = savedClientId; googleClientId = savedClientId; }
+  render();
+}
+async function saveState(){
+  await storageSet('lebenslog-data', JSON.stringify(state));
+}
+
+// ---------- helpers ----------
+function uid(){ return Math.random().toString(36).slice(2,10); }
+function todayISO(){ const d=new Date(); return d.toISOString().slice(0,10); }
+function fmtDate(iso){
+  const d = new Date(iso+'T00:00:00');
+  return d.toLocaleDateString('de-DE',{ day:'2-digit', month:'2-digit', year:'numeric' });
+}
+function mondayOf(date){
+  const d = new Date(date);
+  const diff = (d.getDay()+6)%7;
+  d.setDate(d.getDate()-diff);
+  d.setHours(0,0,0,0);
+  return d;
+}
+function daysSince(iso){
+  const then = new Date(iso+'T00:00:00');
+  const now = new Date(); now.setHours(0,0,0,0);
+  return Math.round((now-then)/86400000);
+}
+
+// ---------- voice parsing ----------
+const NUM_WORDS = {ein:1,eine:1,einen:1,einer:1,zwei:2,drei:3,vier:4,fünf:5,sechs:6,sieben:7,acht:8,neun:9,zehn:10};
+function wordToNum(w){
+  if(/^\d+([.,]\d+)?$/.test(w)) return parseFloat(w.replace(',','.'));
+  return NUM_WORDS[w.toLowerCase()] ?? null;
+}
+const WORKOUT_PATTERNS = [
+  [/fahrrad|rad ?fahr|radel/i, 'Radfahren'],
+  [/laufen|joggen|jogging|rennen/i, 'Laufen'],
+  [/schwimm/i, 'Schwimmen'],
+  [/yoga/i, 'Yoga'],
+  [/push/i, 'Push Workout'],
+  [/pull/i, 'Pull Workout'],
+  [/bein|leg day/i, 'Bein-Workout'],
+  [/workout|kraft|fitnessstudio|\bgym\b|studio/i, 'Krafttraining'],
+];
+const SOCIAL_PATTERNS = [
+  [/treffe|getroffen|treffen/i, 'Treffen'],
+  [/telefonier|angerufen|\banruf|telefonat/i, 'Telefonat'],
+];
+
+function parseEntryText(raw){
+  const text = raw.trim();
+  const lower = text.toLowerCase();
+  let duration = null, distance = null;
+
+  if(/eineinhalb|anderthalb/.test(lower) && /stunde/.test(lower)) duration = 90;
+  else if(/halbe stunde/.test(lower)) duration = 30;
+  else {
+    const hMatch = lower.match(/(\d+|ein|eine|einen|einer|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\s*stunden?/);
+    if(hMatch){ const n = wordToNum(hMatch[1]); if(n) duration = n*60; }
+  }
+  const mMatch = lower.match(/(\d+)\s*min(uten)?\b/);
+  if(mMatch){ duration = (duration||0) + parseInt(mMatch[1],10); }
+
+  const kmMatch = lower.match(/(\d+(?:[.,]\d+)?|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\s*(kilometer|km)\b/);
+  if(kmMatch){ const n = wordToNum(kmMatch[1]); if(n) distance = n; }
+
+  let category = 'workout', type = 'Sonstiges', person = null;
+
+  let socialHit = null;
+  for(const [re,label] of SOCIAL_PATTERNS){ if(re.test(lower)){ socialHit = label; break; } }
+  if(socialHit){
+    category = 'social'; type = socialHit;
+    const pMatch = text.match(/mit\s+([A-Za-zÄÖÜäöüß]+)/i);
+    if(pMatch) person = pMatch[1].charAt(0).toUpperCase()+pMatch[1].slice(1).toLowerCase();
+  } else {
+    let workoutHit = null;
+    for(const [re,label] of WORKOUT_PATTERNS){ if(re.test(lower)){ workoutHit = label; break; } }
+    if(workoutHit){ category='workout'; type=workoutHit; }
+  }
+
+  let date = todayISO();
+  if(/gestern/.test(lower)){ const d=new Date(); d.setDate(d.getDate()-1); date=d.toISOString().slice(0,10); }
+
+  return { category, type, duration_min: duration, distance_km: distance, person, date, note: text };
+}
+
+// ---------- speech recognition ----------
+let recognizer = null, recognizing = false;
+function setupSpeech(){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const micBtn = document.getElementById('micBtn');
+  const micStatus = document.getElementById('micStatus');
+  if(!SR){
+    micBtn.disabled = true;
+    micStatus.textContent = 'Spracherkennung hier nicht verfügbar — bitte Text eingeben (Tastatur-Mikrofon geht auch)';
+    return;
+  }
+  recognizer = new SR();
+  recognizer.lang = 'de-DE';
+  recognizer.interimResults = false;
+  recognizer.maxAlternatives = 1;
+  recognizer.onstart = () => { recognizing = true; micBtn.classList.add('recording'); micStatus.textContent = 'Höre zu…'; };
+  recognizer.onerror = (e) => { micStatus.textContent = 'Fehler bei Spracherkennung — bitte Text eingeben'; };
+  recognizer.onend = () => { recognizing = false; micBtn.classList.remove('recording'); if(micStatus.textContent==='Höre zu…') micStatus.textContent='Spracherkennung bereit'; };
+  recognizer.onresult = (event) => {
+    const text = event.results[0][0].transcript;
+    const ta = document.getElementById('voiceText');
+    ta.value = (ta.value ? ta.value+' ' : '') + text;
+    micStatus.textContent = 'Erkannt — bitte prüfen';
+  };
+  micBtn.addEventListener('click', () => {
+    if(recognizing){ recognizer.stop(); return; }
+    try{ recognizer.start(); }catch(e){ micStatus.textContent='Konnte Mikrofon nicht starten'; }
+  });
+}
+
+// ---------- draft UI ----------
+function showDraft(draft){
+  editingDraft = draft;
+  const area = document.getElementById('draftArea');
+  area.innerHTML = `
+    <div class="draft-box">
+      <span class="tag ${draft.category}">${draft.category==='workout'?'Training':'Sozialer Kontakt'}</span>
+      <label>Art</label>
+      <input type="text" id="d_type" value="${draft.type||''}">
+      <div class="row2">
+        <div>
+          <label>Datum</label>
+          <input type="date" id="d_date" value="${draft.date}">
+        </div>
+        <div>
+          <label>Person (bei Kontakt)</label>
+          <input type="text" id="d_person" value="${draft.person||''}">
+        </div>
+      </div>
+      <div class="row2">
+        <div>
+          <label>Dauer (Minuten)</label>
+          <input type="number" id="d_duration" value="${draft.duration_min ?? ''}">
+        </div>
+        <div>
+          <label>Distanz (km)</label>
+          <input type="number" step="0.1" id="d_distance" value="${draft.distance_km ?? ''}">
+        </div>
+      </div>
+      <label>Kategorie</label>
+      <select id="d_category">
+        <option value="workout" ${draft.category==='workout'?'selected':''}>Training</option>
+        <option value="social" ${draft.category==='social'?'selected':''}>Sozialer Kontakt</option>
+      </select>
+      <div class="btn-row">
+        <button class="btn" id="saveDraftBtn">Speichern</button>
+        <button class="btn secondary" id="discardDraftBtn">Verwerfen</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('saveDraftBtn').onclick = saveDraft;
+  document.getElementById('discardDraftBtn').onclick = () => { area.innerHTML=''; editingDraft=null; };
+}
+function saveDraft(){
+  const entry = {
+    id: uid(),
+    category: document.getElementById('d_category').value,
+    type: document.getElementById('d_type').value || 'Sonstiges',
+    date: document.getElementById('d_date').value || todayISO(),
+    person: document.getElementById('d_person').value || null,
+    duration_min: document.getElementById('d_duration').value ? parseFloat(document.getElementById('d_duration').value) : null,
+    distance_km: document.getElementById('d_distance').value ? parseFloat(document.getElementById('d_distance').value) : null,
+  };
+  state.logs.unshift(entry);
+  saveState();
+  document.getElementById('draftArea').innerHTML = '';
+  document.getElementById('voiceText').value = '';
+  document.getElementById('micStatus').textContent = 'Gespeichert ✓';
+  renderRecent();
+  renderOverview();
+}
+
+// ---------- plan ----------
+function renderPlanDays(){
+  const container = document.getElementById('planDays');
+  container.innerHTML = '';
+  WEEKDAYS.forEach((name, idx) => {
+    const items = state.plan.filter(p=>p.day===idx);
+    const div = document.createElement('div');
+    div.className = 'plan-day';
+    div.innerHTML = `<div class="day-name">${name}</div>` +
+      (items.length ? items.map(it => `
+        <div class="plan-item" data-id="${it.id}">
+          <span>${it.category==='workout'?'🏋️':'👥'} ${it.type}${it.person?' · '+it.person:''}${it.duration_min?' · '+it.duration_min+' Min':''}${it.distance_km?' · '+it.distance_km+' km':''}${it.time?' · '+it.time:''}</span>
+          <button class="del" data-del="${it.id}">✕</button>
+        </div>`).join('') : '<div class="empty">Kein Eintrag</div>');
+    container.appendChild(div);
+  });
+  container.querySelectorAll('[data-del]').forEach(btn=>{
+    btn.onclick = () => { state.plan = state.plan.filter(p=>p.id!==btn.dataset.del); saveState(); renderPlan(); };
+  });
+}
+document.addEventListener('click', (e) => {
+  if(e.target.id === 'addPlanItemBtn'){
+    openPlanForm();
+  }
+});
+function openPlanForm(){
+  const container = document.getElementById('planDays');
+  const box = document.createElement('div');
+  box.className = 'draft-box';
+  box.innerHTML = `
+    <label>Wochentag</label>
+    <select id="p_day">${WEEKDAYS.map((n,i)=>`<option value="${i}">${n}</option>`).join('')}</select>
+    <label>Kategorie</label>
+    <select id="p_category">
+      <option value="workout">Training</option>
+      <option value="social">Sozialer Kontakt</option>
+    </select>
+    <label>Art (z. B. „Push Workout", „Treffen", „Telefonat")</label>
+    <input type="text" id="p_type">
+    <div class="row2">
+      <div><label>Uhrzeit</label><input type="time" id="p_time" value="18:00"></div>
+      <div><label>Person (bei Kontakt)</label><input type="text" id="p_person"></div>
+    </div>
+    <div class="row2">
+      <div><label>Dauer (Minuten)</label><input type="number" id="p_duration"></div>
+      <div><label>Distanz (km)</label><input type="number" step="0.1" id="p_distance"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn" id="p_save">Hinzufügen</button>
+      <button class="btn secondary" id="p_cancel">Abbrechen</button>
+    </div>
+  `;
+  container.appendChild(box);
+  document.getElementById('p_cancel').onclick = () => box.remove();
+  document.getElementById('p_save').onclick = () => {
+    state.plan.push({
+      id: uid(),
+      day: parseInt(document.getElementById('p_day').value,10),
+      category: document.getElementById('p_category').value,
+      type: document.getElementById('p_type').value || 'Sonstiges',
+      time: document.getElementById('p_time').value || '18:00',
+      person: document.getElementById('p_person').value || null,
+      duration_min: document.getElementById('p_duration').value ? parseFloat(document.getElementById('p_duration').value) : null,
+      distance_km: document.getElementById('p_distance').value ? parseFloat(document.getElementById('p_distance').value) : null,
+    });
+    saveState();
+    renderPlan();
+  };
+}
+
+function thisWeekOccurrences(){
+  const monday = mondayOf(new Date());
+  const weekKey = monday.toISOString().slice(0,10);
+  return state.plan.map(p => {
+    let date = new Date(monday); date.setDate(date.getDate()+p.day);
+    if(date < new Date(new Date().toDateString())) date.setDate(date.getDate()+7);
+    const [hh,mm] = (p.time||'18:00').split(':').map(Number);
+    const start = new Date(date); start.setHours(hh,mm,0,0);
+    const durMin = p.duration_min || 60;
+    const end = new Date(start.getTime() + durMin*60000);
+    return { p, start, end, syncKey: weekKey+'_'+p.id };
+  });
+}
+function renderCalendarLinks(){
+  const el = document.getElementById('calendarLinks');
+  if(!state.plan.length){ el.innerHTML = '<div class="empty">Noch kein Wochenplan angelegt.</div>'; return; }
+  const fmt = d => d.getFullYear().toString() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0') + 'T' + String(d.getHours()).padStart(2,'0') + String(d.getMinutes()).padStart(2,'0') + '00';
+  const rows = thisWeekOccurrences().map(({p, start, end, syncKey}) => {
+    const title = encodeURIComponent(`${p.type}${p.person? ' mit '+p.person:''}`);
+    const details = encodeURIComponent(`${p.category==='workout'?'Training':'Kontakt'} — aus Logbuch-Wochenplan`);
+    const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${fmt(start)}/${fmt(end)}&details=${details}&ctz=Europe/Berlin`;
+    const synced = state.synced[syncKey];
+    const status = synced ? '<span style="color:var(--teal);font-size:12.5px;">✓ synchronisiert</span>' : `<a class="cal-link" href="${url}" target="_blank" rel="noopener">Zum Kalender</a>`;
+    return `<div class="plan-item"><span>${WEEKDAYS[p.day]} · ${p.time} · ${p.type}${p.person?' mit '+p.person:''}</span>${status}</div>`;
+  }).join('');
+  el.innerHTML = rows;
+}
+function renderPlan(){ renderPlanDays(); renderCalendarLinks(); }
+
+// ---------- Google Calendar sync ----------
+let googleClientId = null, tokenClient = null, accessToken = null, tokenExpiry = 0;
+
+function setConnStatus(text){ document.getElementById('gConnStatus').textContent = text; }
+
+function ensureTokenClient(){
+  if(!window.google || !google.accounts || !google.accounts.oauth2){ return false; }
+  if(!googleClientId){ return false; }
+  if(!tokenClient){
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: googleClientId,
+      scope: 'https://www.googleapis.com/auth/calendar.events',
+      callback: (resp) => {
+        if(resp.error){ setConnStatus('Fehler: '+resp.error); return; }
+        accessToken = resp.access_token;
+        tokenExpiry = Date.now() + (resp.expires_in*1000);
+        setConnStatus('Verbunden bis ' + new Date(tokenExpiry).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}));
+      }
+    });
+  }
+  return true;
+}
+
+document.getElementById('gSaveIdBtn').addEventListener('click', async () => {
+  googleClientId = document.getElementById('gClientId').value.trim();
+  await storageSet('google-client-id', googleClientId);
+  tokenClient = null;
+  setConnStatus('Client-ID gespeichert — jetzt verbinden');
+});
+
+document.getElementById('gConnectBtn').addEventListener('click', () => {
+  if(!googleClientId){ setConnStatus('Bitte zuerst Client-ID eintragen und speichern'); return; }
+  if(!ensureTokenClient()){ setConnStatus('Google-Login lädt noch — kurz erneut versuchen'); return; }
+  tokenClient.requestAccessToken();
+});
+
+async function createCalendarEvent(item){
+  const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer '+accessToken, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      summary: item.p.type + (item.p.person ? ' mit '+item.p.person : ''),
+      description: (item.p.category==='workout' ? 'Training' : 'Kontakt') + ' — aus Logbuch-Wochenplan',
+      start: { dateTime: item.start.toISOString(), timeZone: 'Europe/Berlin' },
+      end: { dateTime: item.end.toISOString(), timeZone: 'Europe/Berlin' },
+    })
+  });
+  if(!res.ok) throw new Error('Kalender-API-Fehler: '+res.status);
+  return res.json();
+}
+
+document.getElementById('gSyncWeekBtn').addEventListener('click', async () => {
+  if(!accessToken || Date.now() > tokenExpiry){
+    setConnStatus('Bitte zuerst verbinden');
+    return;
+  }
+  const occurrences = thisWeekOccurrences().filter(o => !state.synced[o.syncKey]);
+  if(!occurrences.length){ setConnStatus('Alles für diese Woche schon synchronisiert'); return; }
+  setConnStatus('Synchronisiere … 0/'+occurrences.length);
+  let done = 0, failed = 0;
+  for(const occ of occurrences){
+    try{
+      const ev = await createCalendarEvent(occ);
+      state.synced[occ.syncKey] = ev.id;
+      done++;
+    }catch(e){ failed++; }
+    setConnStatus('Synchronisiere … '+(done+failed)+'/'+occurrences.length);
+  }
+  await saveState();
+  renderCalendarLinks();
+  setConnStatus(failed ? `${done} eingetragen, ${failed} fehlgeschlagen` : `${done} Termine eingetragen ✓`);
+});
+
+// ---------- recent entries ----------
+function renderRecent(){
+  const list = document.getElementById('recentList');
+  const items = state.logs.slice(0,12);
+  if(!items.length){ list.innerHTML = '<div class="empty">Noch keine Einträge.</div>'; return; }
+  list.innerHTML = items.map(l => `
+    <li>
+      <span>${l.category==='workout'?'🏋️':'👥'} ${l.type}${l.person?' · '+l.person:''}${l.duration_min?' · '+l.duration_min+' Min':''}${l.distance_km?' · '+l.distance_km+' km':''}</span>
+      <span class="meta">${fmtDate(l.date)}</span>
+    </li>`).join('');
+}
+
+// ---------- overview ----------
+function renderOverview(){
+  // days since, per workout type and per person
+  const grid = document.getElementById('sinceGrid');
+  const seen = {};
+  state.logs.forEach(l => {
+    const key = l.category==='workout' ? 'w:'+l.type : 'p:'+(l.person||'unbekannt');
+    if(!seen[key] || l.date > seen[key].date) seen[key] = l;
+  });
+  const rows = Object.values(seen).sort((a,b)=> daysSince(b.date)-daysSince(a.date));
+  if(!rows.length){ grid.innerHTML = '<div class="empty">Noch keine Daten.</div>'; }
+  else {
+    grid.innerHTML = rows.map(l => {
+      const d = daysSince(l.date);
+      const cls = d<=3 ? 'ok' : d<=9 ? 'mid' : 'overdue';
+      const label = l.category==='workout' ? l.type : l.person;
+      return `<div class="since-row"><span>${l.category==='workout'?'🏋️':'👥'} ${label}</span><span class="days ${cls}">${d===0?'heute':d+' Tage'}</span></div>`;
+    }).join('');
+  }
+
+  // week / month stats
+  const monday = mondayOf(new Date());
+  const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
+  function summarize(sinceDate){
+    const inRange = state.logs.filter(l => new Date(l.date+'T00:00:00') >= sinceDate);
+    const workouts = inRange.filter(l=>l.category==='workout');
+    const social = inRange.filter(l=>l.category==='social');
+    const byType = {};
+    workouts.forEach(w => {
+      byType[w.type] = byType[w.type] || {count:0, dur:0, dist:0};
+      byType[w.type].count++;
+      byType[w.type].dur += w.duration_min||0;
+      byType[w.type].dist += w.distance_km||0;
+    });
+    const people = [...new Set(social.map(s=>s.person).filter(Boolean))];
+    return {byType, workoutCount: workouts.length, people};
+  }
+  function renderStats(elId, sum){
+    const el = document.getElementById(elId);
+    let html = '';
+    const types = Object.keys(sum.byType);
+    if(!types.length){ html += '<div class="empty">Noch kein Training eingetragen.</div>'; }
+    else {
+      types.forEach(t => {
+        const s = sum.byType[t];
+        let parts = [s.count + (s.count===1?' Mal':' Mal')];
+        if(s.dist) parts.push(s.dist.toFixed(1)+' km');
+        if(s.dur) parts.push(s.dur+' Min');
+        html += `<div class="stat-line"><span>${t}</span><b>${parts.join(' · ')}</b></div>`;
+      });
+      html += `<div class="stat-line"><span>Trainings insgesamt</span><b>${sum.workoutCount}</b></div>`;
+    }
+    if(sum.people.length){
+      html += `<div class="stat-line"><span>Kontakt gehabt mit</span><b>${sum.people.join(', ')}</b></div>`;
+    }
+    el.innerHTML = html;
+  }
+  renderStats('weekStats', summarize(monday));
+  renderStats('monthStats', summarize(monthStart));
+}
+
+// ---------- tabs ----------
+function render(){
+  document.getElementById('todayLabel').textContent = new Date().toLocaleDateString('de-DE',{weekday:'long', day:'2-digit', month:'2-digit'});
+  renderRecent();
+  renderPlan();
+  renderOverview();
+}
+
+document.querySelectorAll('.tabbar button').forEach(btn=>{
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tabbar button').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('view-'+btn.dataset.tab).classList.add('active');
+  });
+});
+
+document.getElementById('parseBtn').addEventListener('click', () => {
+  const text = document.getElementById('voiceText').value.trim();
+  if(!text) return;
+  showDraft(parseEntryText(text));
+});
+document.getElementById('manualBtn').addEventListener('click', () => {
+  showDraft({ category:'workout', type:'', date: todayISO(), person:null, duration_min:null, distance_km:null, note:'' });
+});
+
+setupSpeech();
+loadState();
+</script>
+</body>
+</html>

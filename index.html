@@ -6,12 +6,12 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Logbuch">
+<meta name="apple-mobile-web-app-title" content="Life Tracking">
 <meta name="theme-color" content="#1E2A28">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-512.png">
 <link rel="icon" href="icon-512.png" type="image/png">
-<title>Logbuch</title>
+<title>Life Tracking</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -55,12 +55,19 @@
     display:flex;
     align-items:baseline;
     justify-content:space-between;
-    margin-bottom:22px;
+    margin-bottom:14px;
     border-bottom:1px solid var(--rule);
     padding-bottom:14px;
   }
   .page-head h1{font-size:26px;}
   .page-head .today{font-size:13px;color:var(--ink-soft);}
+  .lang-toggle{display:flex;gap:4px;margin-bottom:20px;}
+  .lang-toggle button{
+    padding:6px 12px;border:1px solid var(--rule);border-radius:20px;
+    background:var(--paper);color:var(--ink-soft);font-family:'Work Sans', sans-serif;
+    font-size:12.5px;font-weight:500;cursor:pointer;
+  }
+  .lang-toggle button.active{background:var(--ink);color:var(--paper);border-color:var(--ink);}
   .tabbar{
     display:flex;
     gap:4px;
@@ -160,42 +167,38 @@
   }
   .entry-list li:last-child{border-bottom:none;}
   .entry-list .meta{color:var(--ink-soft);font-size:12.5px;}
+  .entry-list li .right{display:flex;align-items:center;gap:8px;}
   .plan-day{border-bottom:1px solid var(--rule);padding:14px 0;}
   .plan-day:last-child{border-bottom:none;}
-  .plan-day .day-name{font-family:'Fraunces', serif;font-size:16px;margin-bottom:8px;}
+  .plan-day .day-name{font-family:'Fraunces', serif;font-size:16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:baseline;}
+  .plan-day .day-name .date{font-family:'Work Sans', sans-serif;font-size:12.5px;color:var(--ink-soft);font-weight:400;}
   .plan-item{
     display:flex;justify-content:space-between;align-items:center;
     background:var(--paper);border:1px solid var(--rule);border-radius:8px;
     padding:8px 10px;margin-bottom:6px;font-size:13.5px;
   }
+  .plan-item.logged{background:var(--teal-soft);}
+  .plan-item .done-badge{font-size:11px;color:var(--teal);font-weight:500;margin-left:8px;}
   .plan-item .del{cursor:pointer;color:var(--ink-soft);font-size:16px;border:none;background:none;}
   .since-grid{display:flex;flex-direction:column;gap:8px;}
   .since-row{
     display:flex;justify-content:space-between;align-items:center;
     padding:9px 12px;border-radius:8px;background:var(--paper);border:1px solid var(--rule);
   }
+  .since-row .right{display:flex;align-items:center;gap:8px;}
   .since-row .days{font-family:'Fraunces', serif;font-size:19px;}
   .since-row .days.ok{color:var(--teal);}
   .since-row .days.mid{color:var(--ink);}
   .since-row .days.overdue{color:var(--amber);}
-  .stat-line{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--rule);font-size:14px;}
-  .stat-line:last-child{border-bottom:none;}
-  .stat-line b{font-family:'Fraunces', serif;font-weight:500;}
-  .empty{color:var(--ink-soft);font-size:13.5px;font-style:italic;padding:6px 0;}
-  .lang-toggle{display:flex;gap:4px;margin-bottom:12px;}
-  .lang-toggle button{
-    padding:6px 12px;border:1px solid var(--rule);border-radius:20px;
-    background:var(--paper);color:var(--ink-soft);font-family:'Work Sans', sans-serif;
-    font-size:12.5px;font-weight:500;cursor:pointer;
-  }
-  .lang-toggle button.active{background:var(--ink);color:var(--paper);border-color:var(--ink);}
   .del-btn{
     cursor:pointer;border:none;background:none;color:var(--ink-soft);
     font-size:15px;line-height:1;padding:2px 4px;flex-shrink:0;
   }
   .del-btn:hover{color:var(--amber);}
-  .since-row .right{display:flex;align-items:center;gap:8px;}
-  .entry-list li .right{display:flex;align-items:center;gap:8px;}
+  .stat-line{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--rule);font-size:14px;}
+  .stat-line:last-child{border-bottom:none;}
+  .stat-line b{font-family:'Fraunces', serif;font-weight:500;}
+  .empty{color:var(--ink-soft);font-size:13.5px;font-style:italic;padding:6px 0;}
   a.cal-link{font-size:12.5px;color:var(--teal);text-decoration:underline;}
   @media (max-width:420px){
     .row2{grid-template-columns:1fr;}
@@ -205,68 +208,68 @@
 <body>
 <div id="app">
   <div class="page-head">
-    <h1>Logbuch</h1>
+    <h1>Life Tracking</h1>
     <div class="today" id="todayLabel"></div>
+  </div>
+  <div class="lang-toggle" id="langToggle">
+    <button data-lang="de" class="active">Deutsch</button>
+    <button data-lang="en">English</button>
   </div>
 
   <div class="tabbar">
-    <button data-tab="log" class="active">Eintragen</button>
-    <button data-tab="plan">Wochenplan</button>
-    <button data-tab="overview">Übersicht</button>
+    <button data-tab="log" class="active" data-i18n="tabLog">Eintragen</button>
+    <button data-tab="plan" data-i18n="tabPlan">Wochenplan</button>
+    <button data-tab="overview" data-i18n="tabOverview">Übersicht</button>
   </div>
 
   <section class="view active" id="view-log">
     <div class="card">
-      <h2>Was hast du gemacht?</h2>
-      <p class="hint">Per Mikrofon sprechen oder tippen (auf dem Handy geht auch das Mikrofon der Tastatur) — z. B. „eine Stunde Fahrrad gefahren" oder „mit Papa 30 Minuten telefoniert".</p>
-      <div class="lang-toggle" id="langToggle">
-        <button data-lang="de" class="active">Deutsch</button>
-        <button data-lang="en">English</button>
-      </div>
+      <h2 data-i18n="logHeading">Was hast du gemacht?</h2>
+      <p class="hint" data-i18n="logHint">Per Mikrofon sprechen oder tippen (auf dem Handy geht auch das Mikrofon der Tastatur) — z. B. „eine Stunde Fahrrad gefahren" oder „mit Papa 30 Minuten telefoniert".</p>
       <div class="mic-row">
         <button id="micBtn" title="Aufnahme starten">🎤</button>
-        <span id="micStatus">Spracherkennung bereit</span>
+        <span id="micStatus" data-i18n="micReady">Spracherkennung bereit</span>
       </div>
-      <textarea id="voiceText" placeholder="…oder hier eintippen"></textarea>
+      <textarea id="voiceText" data-i18n-placeholder="voicePlaceholder" placeholder="…oder hier eintippen"></textarea>
       <div class="btn-row">
-        <button class="btn" id="parseBtn">Eintrag erkennen</button>
-        <button class="btn secondary" id="manualBtn">Manuell eintragen</button>
+        <button class="btn" id="parseBtn" data-i18n="btnParse">Eintrag erkennen</button>
+        <button class="btn secondary" id="manualBtn" data-i18n="btnManual">Manuell eintragen</button>
       </div>
       <div id="draftArea"></div>
     </div>
 
     <div class="card">
-      <h2>Zuletzt eingetragen</h2>
+      <h2 data-i18n="recentHeading">Zuletzt eingetragen</h2>
       <ul class="entry-list" id="recentList"></ul>
     </div>
   </section>
 
   <section class="view" id="view-plan">
     <div class="card">
-      <h2>Wochenplan</h2>
-      <p class="hint">Trainings und Kontakte, die sich wiederholen sollen. Aus dem Plan lassen sich Google-Kalender-Einträge für die aktuelle Woche erzeugen.</p>
+      <h2 data-i18n="planHeading">Wochenplan</h2>
+      <p class="hint" data-i18n="planHint">Trainings und Kontakte für diese Woche — geplant oder bereits eingetragen. Wiederkehrende Termine lassen sich hier festlegen.</p>
       <div id="planDays"></div>
       <div class="btn-row">
-        <button class="btn secondary" id="addPlanItemBtn">+ Plan-Eintrag hinzufügen</button>
+        <button class="btn secondary" id="addPlanItemBtn" data-i18n="btnAddPlanItem">+ Plan-Eintrag hinzufügen</button>
       </div>
     </div>
     <div class="card">
-      <h2>Google Kalender</h2>
-      <p class="hint" id="gSetupHint">Einmalig einrichten: eigene Client-ID aus der Google Cloud Console hier eintragen (siehe Anleitung im Chat), dann verbinden.</p>
-      <label>Google Client-ID</label>
+      <h2 data-i18n="calHeading">Google Kalender</h2>
+      <p class="hint" id="gSetupHint" data-i18n="calSetupHint">Einmalig einrichten: eigene Client-ID aus der Google Cloud Console hier eintragen, dann verbinden.</p>
+      <label data-i18n="clientIdLabel">Google Client-ID</label>
       <input type="text" id="gClientId" placeholder="xxxxxxxx.apps.googleusercontent.com">
       <div class="btn-row">
-        <button class="btn secondary" id="gSaveIdBtn">Client-ID speichern</button>
-        <button class="btn" id="gConnectBtn">Mit Google verbinden</button>
+        <button class="btn secondary" id="gSaveIdBtn" data-i18n="btnSaveId">Client-ID speichern</button>
+        <button class="btn" id="gConnectBtn" data-i18n="btnConnect">Mit Google verbinden</button>
       </div>
-      <p class="hint" id="gConnStatus" style="margin-top:10px;">Noch nicht verbunden</p>
+      <p class="hint" id="gConnStatus" data-i18n="connNotYet" style="margin-top:10px;">Noch nicht verbunden</p>
     </div>
 
     <div class="card">
-      <h2>Diese Woche in den Kalender</h2>
-      <p class="hint">Mit Verbindung: ein Klick trägt die ganze Woche direkt ein. Ohne Verbindung: pro Termin ein Link zum manuellen Bestätigen.</p>
+      <h2 data-i18n="calWeekHeading">Diese Woche in den Kalender</h2>
+      <p class="hint" data-i18n="calWeekHint">Mit Verbindung: ein Klick trägt die ganze Woche direkt ein. Ohne Verbindung: pro Termin ein Link zum manuellen Bestätigen.</p>
       <div class="btn-row">
-        <button class="btn" id="gSyncWeekBtn">Diese Woche synchronisieren</button>
+        <button class="btn" id="gSyncWeekBtn" data-i18n="btnSyncWeek">Diese Woche synchronisieren</button>
       </div>
       <div id="calendarLinks" style="margin-top:12px;"></div>
     </div>
@@ -274,28 +277,121 @@
 
   <section class="view" id="view-overview">
     <div class="card">
-      <h2>Wie lange ist es her?</h2>
+      <h2 data-i18n="overviewSinceHeading">Wie lange ist es her?</h2>
       <div class="since-grid" id="sinceGrid"></div>
     </div>
     <div class="card">
-      <h2>Diese Woche</h2>
+      <h2 data-i18n="overviewWeekHeading">Diese Woche</h2>
       <div id="weekStats"></div>
     </div>
     <div class="card">
-      <h2>Dieser Monat</h2>
+      <h2 data-i18n="overviewMonthHeading">Dieser Monat</h2>
       <div id="monthStats"></div>
     </div>
   </section>
 </div>
 
 <script>
-const WEEKDAYS = ['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag'];
-let state = { logs: [], plan: [] };
+const STRINGS = {
+  de: {
+    tabLog:'Eintragen', tabPlan:'Wochenplan', tabOverview:'Übersicht',
+    logHeading:'Was hast du gemacht?',
+    logHint:'Per Mikrofon sprechen oder tippen (auf dem Handy geht auch das Mikrofon der Tastatur) — z. B. „eine Stunde Fahrrad gefahren" oder „mit Papa 30 Minuten telefoniert".',
+    micReady:'Spracherkennung bereit', micListening:'Höre zu…',
+    micError:'Fehler bei Spracherkennung — bitte Text eingeben',
+    micUnavailable:'Spracherkennung hier nicht verfügbar — bitte Text eingeben (Tastatur-Mikrofon geht auch)',
+    micRecognized:'Erkannt — bitte prüfen', savedText:'Gespeichert ✓',
+    voicePlaceholder:'…oder hier eintippen',
+    btnParse:'Eintrag erkennen', btnManual:'Manuell eintragen',
+    recentHeading:'Zuletzt eingetragen', emptyRecent:'Noch keine Einträge.',
+    planHeading:'Wochenplan',
+    planHint:'Trainings und Kontakte für diese Woche — geplant oder bereits eingetragen. Wiederkehrende Termine lassen sich hier festlegen.',
+    btnAddPlanItem:'+ Plan-Eintrag hinzufügen', emptyPlanDay:'Kein Eintrag', doneBadge:'erledigt',
+    calHeading:'Google Kalender',
+    calSetupHint:'Einmalig einrichten: eigene Client-ID aus der Google Cloud Console hier eintragen, dann verbinden.',
+    clientIdLabel:'Google Client-ID', btnSaveId:'Client-ID speichern', btnConnect:'Mit Google verbinden',
+    connNotYet:'Noch nicht verbunden', connSavedText:'Client-ID gespeichert — jetzt verbinden',
+    connLoading:'Google-Login lädt noch — kurz erneut versuchen', connMissingId:'Bitte zuerst Client-ID eintragen und speichern',
+    connUntil:'Verbunden bis', connError:'Fehler:', connPleaseConnect:'Bitte zuerst verbinden',
+    connAllSynced:'Alles für diese Woche schon synchronisiert', connSyncing:'Synchronisiere …',
+    connSyncedDone:'Termine eingetragen ✓', connSyncedPartial:'eingetragen,', connSyncedFailed:'fehlgeschlagen',
+    calWeekHeading:'Diese Woche in den Kalender',
+    calWeekHint:'Mit Verbindung: ein Klick trägt die ganze Woche direkt ein. Ohne Verbindung: pro Termin ein Link zum manuellen Bestätigen.',
+    btnSyncWeek:'Diese Woche synchronisieren', emptyPlanNone:'Noch kein Wochenplan angelegt.',
+    calLinkText:'Zum Kalender', syncedText:'✓ synchronisiert',
+    overviewSinceHeading:'Wie lange ist es her?', overviewWeekHeading:'Diese Woche', overviewMonthHeading:'Dieser Monat',
+    emptySince:'Noch keine Daten.', emptyWorkoutStats:'Noch kein Training eingetragen.',
+    totalWorkouts:'Trainings insgesamt', contactedWith:'Kontakt gehabt mit',
+    today:'heute', day:'Tag', days:'Tage', month:'Monat', months:'Monate',
+    weekdays:['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag'],
+    categoryWorkout:'Training', categorySocial:'Sozialer Kontakt',
+    formTypeLabel:'Art', formDateLabel:'Datum', formPersonLabel:'Person (bei Kontakt)',
+    formDurationLabel:'Dauer (Minuten)', formDistanceLabel:'Distanz (km)', formCategoryLabel:'Kategorie',
+    btnSave:'Speichern', btnDiscard:'Verwerfen',
+    planFormWeekday:'Wochentag', planFormType:'Art (z. B. „Push Workout", „Treffen", „Telefonat")',
+    planFormTime:'Uhrzeit', planFormPerson:'Person (bei Kontakt)', planFormDuration:'Dauer (Minuten)', planFormDistance:'Distanz (km)',
+    btnAdd:'Hinzufügen', btnCancel:'Abbrechen', delTitle:'Eintrag löschen',
+    min:'Min', kmLabel:'km', other:'Sonstiges',
+  },
+  en: {
+    tabLog:'Log', tabPlan:'This Week', tabOverview:'Overview',
+    logHeading:'What did you do?',
+    logHint:"Speak into the microphone or type (on mobile, your keyboard's mic works too) — e.g. \"cycled for one hour\" or \"called Dad for 30 minutes\".",
+    micReady:'Voice recognition ready', micListening:'Listening…',
+    micError:'Voice recognition error — please type instead',
+    micUnavailable:'Voice recognition not available here — please type (keyboard mic works too)',
+    micRecognized:'Recognized — please check', savedText:'Saved ✓',
+    voicePlaceholder:'…or type here',
+    btnParse:'Recognize entry', btnManual:'Add manually',
+    recentHeading:'Recently logged', emptyRecent:'No entries yet.',
+    planHeading:'This week',
+    planHint:'Workouts and contacts for this week — planned or already logged. Recurring items can be set up here.',
+    btnAddPlanItem:'+ Add plan item', emptyPlanDay:'Nothing planned', doneBadge:'done',
+    calHeading:'Google Calendar',
+    calSetupHint:'One-time setup: enter your own Client ID from Google Cloud Console below, then connect.',
+    clientIdLabel:'Google Client ID', btnSaveId:'Save Client ID', btnConnect:'Connect with Google',
+    connNotYet:'Not connected yet', connSavedText:'Client ID saved — now connect',
+    connLoading:'Google login still loading — try again shortly', connMissingId:'Please enter and save a Client ID first',
+    connUntil:'Connected until', connError:'Error:', connPleaseConnect:'Please connect first',
+    connAllSynced:'Everything for this week is already synced', connSyncing:'Syncing …',
+    connSyncedDone:'events added ✓', connSyncedPartial:'added,', connSyncedFailed:'failed',
+    calWeekHeading:'Add this week to your calendar',
+    calWeekHint:'Connected: one click adds the whole week. Not connected: one link per item to confirm manually.',
+    btnSyncWeek:'Sync this week', emptyPlanNone:'No weekly plan yet.',
+    calLinkText:'Add to calendar', syncedText:'✓ synced',
+    overviewSinceHeading:'How long has it been?', overviewWeekHeading:'This week', overviewMonthHeading:'This month',
+    emptySince:'No data yet.', emptyWorkoutStats:'No workouts logged yet.',
+    totalWorkouts:'Total workouts', contactedWith:'In touch with',
+    today:'today', day:'day', days:'days', month:'month', months:'months',
+    weekdays:['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],
+    categoryWorkout:'Workout', categorySocial:'Social contact',
+    formTypeLabel:'Type', formDateLabel:'Date', formPersonLabel:'Person (for contacts)',
+    formDurationLabel:'Duration (minutes)', formDistanceLabel:'Distance (km)', formCategoryLabel:'Category',
+    btnSave:'Save', btnDiscard:'Discard',
+    planFormWeekday:'Weekday', planFormType:'Type (e.g. "Push Workout", "Meetup", "Phone Call")',
+    planFormTime:'Time', planFormPerson:'Person (for contacts)', planFormDuration:'Duration (minutes)', planFormDistance:'Distance (km)',
+    btnAdd:'Add', btnCancel:'Cancel', delTitle:'Delete entry',
+    min:'min', kmLabel:'km', other:'Other',
+  }
+};
+let L = 'de';
+let state = { logs: [], plan: [], synced: {} };
 let editingDraft = null;
 
+function applyStaticTranslations(){
+  const T = STRINGS[L];
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.dataset.i18n;
+    if(T[k]!==undefined) el.textContent = T[k];
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{
+    const k = el.dataset.i18nPlaceholder;
+    if(T[k]!==undefined) el.placeholder = T[k];
+  });
+  document.documentElement.lang = L;
+}
+
 // ---------- persistence ----------
-// Läuft die Seite innerhalb von Claude, wird window.storage genutzt;
-// läuft sie selbst gehostet (z. B. GitHub Pages), wird echtes localStorage genutzt.
 async function storageGet(key){
   if(window.storage){
     try{ const r = await window.storage.get(key, false); return r ? r.value : null; }
@@ -306,7 +402,7 @@ async function storageGet(key){
 async function storageSet(key, value){
   if(window.storage){
     try{ await window.storage.set(key, value, false); return; }
-    catch(e){ console.error('Speichern fehlgeschlagen', e); return; }
+    catch(e){ console.error('save failed', e); return; }
   }
   localStorage.setItem(key, value);
 }
@@ -316,8 +412,16 @@ async function loadState(){
     if(raw){ state = JSON.parse(raw); }
   }catch(e){ /* no data yet */ }
   if(!state.synced) state.synced = {};
+  if(!state.plan) state.plan = [];
+  if(!state.logs) state.logs = [];
   const savedClientId = await storageGet('google-client-id');
   if(savedClientId){ document.getElementById('gClientId').value = savedClientId; googleClientId = savedClientId; }
+  const savedLang = await storageGet('ui-lang');
+  if(savedLang === 'en' || savedLang === 'de'){
+    L = savedLang;
+    document.querySelectorAll('#langToggle button').forEach(b=>b.classList.toggle('active', b.dataset.lang===L));
+  }
+  applyStaticTranslations();
   render();
 }
 async function saveState(){
@@ -329,7 +433,10 @@ function uid(){ return Math.random().toString(36).slice(2,10); }
 function todayISO(){ const d=new Date(); return d.toISOString().slice(0,10); }
 function fmtDate(iso){
   const d = new Date(iso+'T00:00:00');
-  return d.toLocaleDateString('de-DE',{ day:'2-digit', month:'2-digit', year:'numeric' });
+  return d.toLocaleDateString(L==='en'?'en-US':'de-DE',{ day:'2-digit', month:'2-digit', year:'numeric' });
+}
+function fmtShortDate(d){
+  return d.toLocaleDateString(L==='en'?'en-US':'de-DE',{ day:'2-digit', month:'2-digit' });
 }
 function mondayOf(date){
   const d = new Date(date);
@@ -337,6 +444,10 @@ function mondayOf(date){
   d.setDate(d.getDate()-diff);
   d.setHours(0,0,0,0);
   return d;
+}
+function currentWeekDates(){
+  const monday = mondayOf(new Date());
+  return [0,1,2,3,4,5,6].map(i=>{ const d = new Date(monday); d.setDate(d.getDate()+i); return d; });
 }
 function daysSince(iso){
   const then = new Date(iso+'T00:00:00');
@@ -354,14 +465,15 @@ function monthDayDiff(iso){
 }
 function formatSince(iso){
   const d = daysSince(iso);
-  if(d===0) return 'heute';
-  if(d===1) return '1 Tag';
-  if(d<=30) return d+' Tage';
+  const T = STRINGS[L];
+  if(d===0) return T.today;
+  if(d===1) return '1 '+T.day;
+  if(d<=30) return d+' '+T.days;
   const {months, days} = monthDayDiff(iso);
   const parts = [];
-  if(months>0) parts.push(months+(months===1?' Monat':' Monate'));
-  if(days>0) parts.push(days+(days===1?' Tag':' Tage'));
-  return parts.length ? parts.join(' ') : d+' Tage';
+  if(months>0) parts.push(months+' '+(months===1?T.month:T.months));
+  if(days>0) parts.push(days+' '+(days===1?T.day:T.days));
+  return parts.length ? parts.join(' ') : d+' '+T.days;
 }
 
 // ---------- voice parsing: German ----------
@@ -384,12 +496,10 @@ const SOCIAL_PATTERNS_DE = [
   [/treffe|getroffen|treffen/i, 'Treffen'],
   [/telefonier|angerufen|\banruf|telefonat/i, 'Telefonat'],
 ];
-
 function parseEntryTextDE(raw){
   const text = raw.trim();
   const lower = text.toLowerCase();
   let duration = null, distance = null;
-
   if(/eineinhalb|anderthalb/.test(lower) && /stunde/.test(lower)) duration = 90;
   else if(/halbe stunde/.test(lower)) duration = 30;
   else {
@@ -398,12 +508,9 @@ function parseEntryTextDE(raw){
   }
   const mMatch = lower.match(/(\d+)\s*min(uten)?\b/);
   if(mMatch){ duration = (duration||0) + parseInt(mMatch[1],10); }
-
   const kmMatch = lower.match(/(\d+(?:[.,]\d+)?|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\s*(kilometer|km)\b/);
   if(kmMatch){ const n = wordToNumDE(kmMatch[1]); if(n) distance = n; }
-
-  let category = 'workout', type = 'Sonstiges', person = null;
-
+  let category = 'workout', type = STRINGS.de.other, person = null;
   let socialHit = null;
   for(const [re,label] of SOCIAL_PATTERNS_DE){ if(re.test(lower)){ socialHit = label; break; } }
   if(socialHit){
@@ -415,10 +522,8 @@ function parseEntryTextDE(raw){
     for(const [re,label] of WORKOUT_PATTERNS_DE){ if(re.test(lower)){ workoutHit = label; break; } }
     if(workoutHit){ category='workout'; type=workoutHit; }
   }
-
   let date = todayISO();
   if(/gestern/.test(lower)){ const d=new Date(); d.setDate(d.getDate()-1); date=d.toISOString().slice(0,10); }
-
   return { category, type, duration_min: duration, distance_km: distance, person, date, note: text };
 }
 
@@ -442,12 +547,10 @@ const SOCIAL_PATTERNS_EN = [
   [/met\b|meeting|hang(ing)? out|hung out/i, 'Meetup'],
   [/call(ed)?|phone/i, 'Phone Call'],
 ];
-
 function parseEntryTextEN(raw){
   const text = raw.trim();
   const lower = text.toLowerCase();
   let duration = null, distance = null;
-
   if(/hour and a half|one and a half hours|an hour and a half/.test(lower)) duration = 90;
   else if(/half an hour|half hour/.test(lower)) duration = 30;
   else {
@@ -456,16 +559,13 @@ function parseEntryTextEN(raw){
   }
   const mMatch = lower.match(/(\d+)\s*min(ute)?s?\b/);
   if(mMatch){ duration = (duration||0) + parseInt(mMatch[1],10); }
-
   const kmMatch = lower.match(/(\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten)\s*(kilometers?|km)\b/);
   if(kmMatch){ const n = wordToNumEN(kmMatch[1]); if(n) distance = n; }
   else {
     const miMatch = lower.match(/(\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten)\s*(miles?|mi)\b/);
     if(miMatch){ const n = wordToNumEN(miMatch[1]); if(n) distance = Math.round(n*1.60934*10)/10; }
   }
-
-  let category = 'workout', type = 'Other', person = null;
-
+  let category = 'workout', type = STRINGS.en.other, person = null;
   let socialHit = null;
   for(const [re,label] of SOCIAL_PATTERNS_EN){ if(re.test(lower)){ socialHit = label; break; } }
   if(socialHit){
@@ -477,23 +577,21 @@ function parseEntryTextEN(raw){
     for(const [re,label] of WORKOUT_PATTERNS_EN){ if(re.test(lower)){ workoutHit = label; break; } }
     if(workoutHit){ category='workout'; type=workoutHit; }
   }
-
   let date = todayISO();
   if(/yesterday/.test(lower)){ const d=new Date(); d.setDate(d.getDate()-1); date=d.toISOString().slice(0,10); }
-
   return { category, type, duration_min: duration, distance_km: distance, person, date, note: text };
 }
+function parseEntryText(raw){ return L === 'en' ? parseEntryTextEN(raw) : parseEntryTextDE(raw); }
 
-let voiceLang = 'de';
-function parseEntryText(raw){
-  return voiceLang === 'en' ? parseEntryTextEN(raw) : parseEntryTextDE(raw);
-}
 document.querySelectorAll('#langToggle button').forEach(btn=>{
-  btn.addEventListener('click', () => {
-    voiceLang = btn.dataset.lang;
+  btn.addEventListener('click', async () => {
+    L = btn.dataset.lang;
     document.querySelectorAll('#langToggle button').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
-    if(recognizer) recognizer.lang = voiceLang==='en' ? 'en-US' : 'de-DE';
+    if(recognizer) recognizer.lang = L==='en' ? 'en-US' : 'de-DE';
+    await storageSet('ui-lang', L);
+    applyStaticTranslations();
+    render();
   });
 });
 
@@ -505,65 +603,67 @@ function setupSpeech(){
   const micStatus = document.getElementById('micStatus');
   if(!SR){
     micBtn.disabled = true;
-    micStatus.textContent = 'Spracherkennung hier nicht verfügbar — bitte Text eingeben (Tastatur-Mikrofon geht auch)';
+    micStatus.textContent = STRINGS[L].micUnavailable;
+    micStatus.removeAttribute('data-i18n');
     return;
   }
   recognizer = new SR();
-  recognizer.lang = voiceLang==='en' ? 'en-US' : 'de-DE';
+  recognizer.lang = L==='en' ? 'en-US' : 'de-DE';
   recognizer.interimResults = false;
   recognizer.maxAlternatives = 1;
-  recognizer.onstart = () => { recognizing = true; micBtn.classList.add('recording'); micStatus.textContent = 'Höre zu…'; };
-  recognizer.onerror = (e) => { micStatus.textContent = 'Fehler bei Spracherkennung — bitte Text eingeben'; };
-  recognizer.onend = () => { recognizing = false; micBtn.classList.remove('recording'); if(micStatus.textContent==='Höre zu…') micStatus.textContent='Spracherkennung bereit'; };
+  recognizer.onstart = () => { recognizing = true; micBtn.classList.add('recording'); micStatus.textContent = STRINGS[L].micListening; };
+  recognizer.onerror = () => { micStatus.textContent = STRINGS[L].micError; };
+  recognizer.onend = () => { recognizing = false; micBtn.classList.remove('recording'); if(micStatus.textContent===STRINGS[L].micListening) micStatus.textContent = STRINGS[L].micReady; };
   recognizer.onresult = (event) => {
     const text = event.results[0][0].transcript;
     const ta = document.getElementById('voiceText');
     ta.value = (ta.value ? ta.value+' ' : '') + text;
-    micStatus.textContent = 'Erkannt — bitte prüfen';
+    micStatus.textContent = STRINGS[L].micRecognized;
   };
   micBtn.addEventListener('click', () => {
     if(recognizing){ recognizer.stop(); return; }
-    try{ recognizer.start(); }catch(e){ micStatus.textContent='Konnte Mikrofon nicht starten'; }
+    try{ recognizer.start(); }catch(e){ micStatus.textContent = STRINGS[L].micError; }
   });
 }
 
 // ---------- draft UI ----------
 function showDraft(draft){
   editingDraft = draft;
+  const T = STRINGS[L];
   const area = document.getElementById('draftArea');
   area.innerHTML = `
     <div class="draft-box">
-      <span class="tag ${draft.category}">${draft.category==='workout'?'Training':'Sozialer Kontakt'}</span>
-      <label>Art</label>
+      <span class="tag ${draft.category}">${draft.category==='workout'?T.categoryWorkout:T.categorySocial}</span>
+      <label>${T.formTypeLabel}</label>
       <input type="text" id="d_type" value="${draft.type||''}">
       <div class="row2">
         <div>
-          <label>Datum</label>
+          <label>${T.formDateLabel}</label>
           <input type="date" id="d_date" value="${draft.date}">
         </div>
         <div>
-          <label>Person (bei Kontakt)</label>
+          <label>${T.formPersonLabel}</label>
           <input type="text" id="d_person" value="${draft.person||''}">
         </div>
       </div>
       <div class="row2">
         <div>
-          <label>Dauer (Minuten)</label>
+          <label>${T.formDurationLabel}</label>
           <input type="number" id="d_duration" value="${draft.duration_min ?? ''}">
         </div>
         <div>
-          <label>Distanz (km)</label>
+          <label>${T.formDistanceLabel}</label>
           <input type="number" step="0.1" id="d_distance" value="${draft.distance_km ?? ''}">
         </div>
       </div>
-      <label>Kategorie</label>
+      <label>${T.formCategoryLabel}</label>
       <select id="d_category">
-        <option value="workout" ${draft.category==='workout'?'selected':''}>Training</option>
-        <option value="social" ${draft.category==='social'?'selected':''}>Sozialer Kontakt</option>
+        <option value="workout" ${draft.category==='workout'?'selected':''}>${T.categoryWorkout}</option>
+        <option value="social" ${draft.category==='social'?'selected':''}>${T.categorySocial}</option>
       </select>
       <div class="btn-row">
-        <button class="btn" id="saveDraftBtn">Speichern</button>
-        <button class="btn secondary" id="discardDraftBtn">Verwerfen</button>
+        <button class="btn" id="saveDraftBtn">${T.btnSave}</button>
+        <button class="btn secondary" id="discardDraftBtn">${T.btnDiscard}</button>
       </div>
     </div>
   `;
@@ -574,7 +674,7 @@ function saveDraft(){
   const entry = {
     id: uid(),
     category: document.getElementById('d_category').value,
-    type: document.getElementById('d_type').value || 'Sonstiges',
+    type: document.getElementById('d_type').value || STRINGS[L].other,
     date: document.getElementById('d_date').value || todayISO(),
     person: document.getElementById('d_person').value || null,
     duration_min: document.getElementById('d_duration').value ? parseFloat(document.getElementById('d_duration').value) : null,
@@ -584,61 +684,79 @@ function saveDraft(){
   saveState();
   document.getElementById('draftArea').innerHTML = '';
   document.getElementById('voiceText').value = '';
-  document.getElementById('micStatus').textContent = 'Gespeichert ✓';
+  document.getElementById('micStatus').textContent = STRINGS[L].savedText;
   renderRecent();
+  renderPlan();
   renderOverview();
 }
 
 // ---------- plan ----------
 function renderPlanDays(){
+  const T = STRINGS[L];
   const container = document.getElementById('planDays');
   container.innerHTML = '';
-  WEEKDAYS.forEach((name, idx) => {
-    const items = state.plan.filter(p=>p.day===idx);
+  const weekDates = currentWeekDates();
+  T.weekdays.forEach((name, idx) => {
+    const date = weekDates[idx];
+    const dateISO = date.toISOString().slice(0,10);
+    const planItems = state.plan.filter(p=>p.day===idx);
+    const loggedItems = state.logs.filter(l=>l.date===dateISO);
     const div = document.createElement('div');
     div.className = 'plan-day';
-    div.innerHTML = `<div class="day-name">${name}</div>` +
-      (items.length ? items.map(it => `
+    let html = `<div class="day-name"><span>${name}</span><span class="date">${fmtShortDate(date)}</span></div>`;
+    if(!planItems.length && !loggedItems.length){
+      html += `<div class="empty">${T.emptyPlanDay}</div>`;
+    } else {
+      html += planItems.map(it => `
         <div class="plan-item" data-id="${it.id}">
-          <span>${it.category==='workout'?'🏋️':'👥'} ${it.type}${it.person?' · '+it.person:''}${it.duration_min?' · '+it.duration_min+' Min':''}${it.distance_km?' · '+it.distance_km+' km':''}${it.time?' · '+it.time:''}</span>
-          <button class="del" data-del="${it.id}">✕</button>
-        </div>`).join('') : '<div class="empty">Kein Eintrag</div>');
+          <span>${it.category==='workout'?'🏋️':'👥'} ${it.type}${it.person?' · '+it.person:''}${it.duration_min?' · '+it.duration_min+' '+T.min:''}${it.distance_km?' · '+it.distance_km+' '+T.kmLabel:''}${it.time?' · '+it.time:''}</span>
+          <button class="del" data-del-plan="${it.id}">✕</button>
+        </div>`).join('');
+      html += loggedItems.map(l => `
+        <div class="plan-item logged" data-id="${l.id}">
+          <span>${l.category==='workout'?'🏋️':'👥'} ${l.type}${l.person?' · '+l.person:''}${l.duration_min?' · '+l.duration_min+' '+T.min:''}${l.distance_km?' · '+l.distance_km+' '+T.kmLabel:''}<span class="done-badge">✓ ${T.doneBadge}</span></span>
+          <button class="del" data-del-log="${l.id}">✕</button>
+        </div>`).join('');
+    }
+    div.innerHTML = html;
     container.appendChild(div);
   });
-  container.querySelectorAll('[data-del]').forEach(btn=>{
-    btn.onclick = () => { state.plan = state.plan.filter(p=>p.id!==btn.dataset.del); saveState(); renderPlan(); };
+  container.querySelectorAll('[data-del-plan]').forEach(btn=>{
+    btn.onclick = () => { state.plan = state.plan.filter(p=>p.id!==btn.dataset.delPlan); saveState(); renderPlan(); };
+  });
+  container.querySelectorAll('[data-del-log]').forEach(btn=>{
+    btn.onclick = () => { state.logs = state.logs.filter(l=>l.id!==btn.dataset.delLog); saveState(); renderPlan(); renderRecent(); renderOverview(); };
   });
 }
 document.addEventListener('click', (e) => {
-  if(e.target.id === 'addPlanItemBtn'){
-    openPlanForm();
-  }
+  if(e.target.id === 'addPlanItemBtn'){ openPlanForm(); }
 });
 function openPlanForm(){
+  const T = STRINGS[L];
   const container = document.getElementById('planDays');
   const box = document.createElement('div');
   box.className = 'draft-box';
   box.innerHTML = `
-    <label>Wochentag</label>
-    <select id="p_day">${WEEKDAYS.map((n,i)=>`<option value="${i}">${n}</option>`).join('')}</select>
-    <label>Kategorie</label>
+    <label>${T.planFormWeekday}</label>
+    <select id="p_day">${T.weekdays.map((n,i)=>`<option value="${i}">${n}</option>`).join('')}</select>
+    <label>${T.formCategoryLabel}</label>
     <select id="p_category">
-      <option value="workout">Training</option>
-      <option value="social">Sozialer Kontakt</option>
+      <option value="workout">${T.categoryWorkout}</option>
+      <option value="social">${T.categorySocial}</option>
     </select>
-    <label>Art (z. B. „Push Workout", „Treffen", „Telefonat")</label>
+    <label>${T.planFormType}</label>
     <input type="text" id="p_type">
     <div class="row2">
-      <div><label>Uhrzeit</label><input type="time" id="p_time" value="18:00"></div>
-      <div><label>Person (bei Kontakt)</label><input type="text" id="p_person"></div>
+      <div><label>${T.planFormTime}</label><input type="time" id="p_time" value="18:00"></div>
+      <div><label>${T.planFormPerson}</label><input type="text" id="p_person"></div>
     </div>
     <div class="row2">
-      <div><label>Dauer (Minuten)</label><input type="number" id="p_duration"></div>
-      <div><label>Distanz (km)</label><input type="number" step="0.1" id="p_distance"></div>
+      <div><label>${T.planFormDuration}</label><input type="number" id="p_duration"></div>
+      <div><label>${T.planFormDistance}</label><input type="number" step="0.1" id="p_distance"></div>
     </div>
     <div class="btn-row">
-      <button class="btn" id="p_save">Hinzufügen</button>
-      <button class="btn secondary" id="p_cancel">Abbrechen</button>
+      <button class="btn" id="p_save">${T.btnAdd}</button>
+      <button class="btn secondary" id="p_cancel">${T.btnCancel}</button>
     </div>
   `;
   container.appendChild(box);
@@ -648,7 +766,7 @@ function openPlanForm(){
       id: uid(),
       day: parseInt(document.getElementById('p_day').value,10),
       category: document.getElementById('p_category').value,
-      type: document.getElementById('p_type').value || 'Sonstiges',
+      type: document.getElementById('p_type').value || T.other,
       time: document.getElementById('p_time').value || '18:00',
       person: document.getElementById('p_person').value || null,
       duration_min: document.getElementById('p_duration').value ? parseFloat(document.getElementById('p_duration').value) : null,
@@ -658,7 +776,6 @@ function openPlanForm(){
     renderPlan();
   };
 }
-
 function thisWeekOccurrences(){
   const monday = mondayOf(new Date());
   const weekKey = monday.toISOString().slice(0,10);
@@ -673,16 +790,17 @@ function thisWeekOccurrences(){
   });
 }
 function renderCalendarLinks(){
+  const T = STRINGS[L];
   const el = document.getElementById('calendarLinks');
-  if(!state.plan.length){ el.innerHTML = '<div class="empty">Noch kein Wochenplan angelegt.</div>'; return; }
+  if(!state.plan.length){ el.innerHTML = `<div class="empty">${T.emptyPlanNone}</div>`; return; }
   const fmt = d => d.getFullYear().toString() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0') + 'T' + String(d.getHours()).padStart(2,'0') + String(d.getMinutes()).padStart(2,'0') + '00';
   const rows = thisWeekOccurrences().map(({p, start, end, syncKey}) => {
-    const title = encodeURIComponent(`${p.type}${p.person? ' mit '+p.person:''}`);
-    const details = encodeURIComponent(`${p.category==='workout'?'Training':'Kontakt'} — aus Logbuch-Wochenplan`);
+    const title = encodeURIComponent(`${p.type}${p.person? ' · '+p.person:''}`);
+    const details = encodeURIComponent(`${p.category==='workout'?T.categoryWorkout:T.categorySocial} — Life Tracking`);
     const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${fmt(start)}/${fmt(end)}&details=${details}&ctz=Europe/Berlin`;
     const synced = state.synced[syncKey];
-    const status = synced ? '<span style="color:var(--teal);font-size:12.5px;">✓ synchronisiert</span>' : `<a class="cal-link" href="${url}" target="_blank" rel="noopener">Zum Kalender</a>`;
-    return `<div class="plan-item"><span>${WEEKDAYS[p.day]} · ${p.time} · ${p.type}${p.person?' mit '+p.person:''}</span>${status}</div>`;
+    const status = synced ? `<span style="color:var(--teal);font-size:12.5px;">${T.syncedText}</span>` : `<a class="cal-link" href="${url}" target="_blank" rel="noopener">${T.calLinkText}</a>`;
+    return `<div class="plan-item"><span>${T.weekdays[p.day]} · ${p.time} · ${p.type}${p.person?' · '+p.person:''}</span>${status}</div>`;
   }).join('');
   el.innerHTML = rows;
 }
@@ -690,9 +808,7 @@ function renderPlan(){ renderPlanDays(); renderCalendarLinks(); }
 
 // ---------- Google Calendar sync ----------
 let googleClientId = null, tokenClient = null, accessToken = null, tokenExpiry = 0;
-
-function setConnStatus(text){ document.getElementById('gConnStatus').textContent = text; }
-
+function setConnStatus(text){ const el = document.getElementById('gConnStatus'); el.removeAttribute('data-i18n'); el.textContent = text; }
 function ensureTokenClient(){
   if(!window.google || !google.accounts || !google.accounts.oauth2){ return false; }
   if(!googleClientId){ return false; }
@@ -701,97 +817,85 @@ function ensureTokenClient(){
       client_id: googleClientId,
       scope: 'https://www.googleapis.com/auth/calendar.events',
       callback: (resp) => {
-        if(resp.error){ setConnStatus('Fehler: '+resp.error); return; }
+        if(resp.error){ setConnStatus(STRINGS[L].connError+' '+resp.error); return; }
         accessToken = resp.access_token;
         tokenExpiry = Date.now() + (resp.expires_in*1000);
-        setConnStatus('Verbunden bis ' + new Date(tokenExpiry).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}));
+        setConnStatus(STRINGS[L].connUntil+' ' + new Date(tokenExpiry).toLocaleTimeString(L==='en'?'en-US':'de-DE',{hour:'2-digit',minute:'2-digit'}));
       }
     });
   }
   return true;
 }
-
 document.getElementById('gSaveIdBtn').addEventListener('click', async () => {
   googleClientId = document.getElementById('gClientId').value.trim();
   await storageSet('google-client-id', googleClientId);
   tokenClient = null;
-  setConnStatus('Client-ID gespeichert — jetzt verbinden');
+  setConnStatus(STRINGS[L].connSavedText);
 });
-
 document.getElementById('gConnectBtn').addEventListener('click', () => {
-  if(!googleClientId){ setConnStatus('Bitte zuerst Client-ID eintragen und speichern'); return; }
-  if(!ensureTokenClient()){ setConnStatus('Google-Login lädt noch — kurz erneut versuchen'); return; }
+  if(!googleClientId){ setConnStatus(STRINGS[L].connMissingId); return; }
+  if(!ensureTokenClient()){ setConnStatus(STRINGS[L].connLoading); return; }
   tokenClient.requestAccessToken();
 });
-
 async function createCalendarEvent(item){
+  const T = STRINGS[L];
   const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
     method: 'POST',
     headers: { 'Authorization': 'Bearer '+accessToken, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      summary: item.p.type + (item.p.person ? ' mit '+item.p.person : ''),
-      description: (item.p.category==='workout' ? 'Training' : 'Kontakt') + ' — aus Logbuch-Wochenplan',
+      summary: item.p.type + (item.p.person ? ' · '+item.p.person : ''),
+      description: (item.p.category==='workout' ? T.categoryWorkout : T.categorySocial) + ' — Life Tracking',
       start: { dateTime: item.start.toISOString(), timeZone: 'Europe/Berlin' },
       end: { dateTime: item.end.toISOString(), timeZone: 'Europe/Berlin' },
     })
   });
-  if(!res.ok) throw new Error('Kalender-API-Fehler: '+res.status);
+  if(!res.ok) throw new Error('Calendar API error: '+res.status);
   return res.json();
 }
-
 document.getElementById('gSyncWeekBtn').addEventListener('click', async () => {
-  if(!accessToken || Date.now() > tokenExpiry){
-    setConnStatus('Bitte zuerst verbinden');
-    return;
-  }
+  const T = STRINGS[L];
+  if(!accessToken || Date.now() > tokenExpiry){ setConnStatus(T.connPleaseConnect); return; }
   const occurrences = thisWeekOccurrences().filter(o => !state.synced[o.syncKey]);
-  if(!occurrences.length){ setConnStatus('Alles für diese Woche schon synchronisiert'); return; }
-  setConnStatus('Synchronisiere … 0/'+occurrences.length);
+  if(!occurrences.length){ setConnStatus(T.connAllSynced); return; }
+  setConnStatus(T.connSyncing+' 0/'+occurrences.length);
   let done = 0, failed = 0;
   for(const occ of occurrences){
-    try{
-      const ev = await createCalendarEvent(occ);
-      state.synced[occ.syncKey] = ev.id;
-      done++;
-    }catch(e){ failed++; }
-    setConnStatus('Synchronisiere … '+(done+failed)+'/'+occurrences.length);
+    try{ const ev = await createCalendarEvent(occ); state.synced[occ.syncKey] = ev.id; done++; }
+    catch(e){ failed++; }
+    setConnStatus(T.connSyncing+' '+(done+failed)+'/'+occurrences.length);
   }
   await saveState();
   renderCalendarLinks();
-  setConnStatus(failed ? `${done} eingetragen, ${failed} fehlgeschlagen` : `${done} Termine eingetragen ✓`);
+  setConnStatus(failed ? `${done} ${T.connSyncedPartial} ${failed} ${T.connSyncedFailed}` : `${done} ${T.connSyncedDone}`);
 });
 
 // ---------- recent entries ----------
 function renderRecent(){
+  const T = STRINGS[L];
   const list = document.getElementById('recentList');
   const items = state.logs.slice(0,12);
-  if(!items.length){ list.innerHTML = '<div class="empty">Noch keine Einträge.</div>'; return; }
+  if(!items.length){ list.innerHTML = `<div class="empty">${T.emptyRecent}</div>`; return; }
   list.innerHTML = items.map(l => `
     <li>
-      <span>${l.category==='workout'?'🏋️':'👥'} ${l.type}${l.person?' · '+l.person:''}${l.duration_min?' · '+l.duration_min+' Min':''}${l.distance_km?' · '+l.distance_km+' km':''}</span>
-      <span class="right"><span class="meta">${fmtDate(l.date)}</span><button class="del-btn" data-del="${l.id}" title="Eintrag löschen">✕</button></span>
+      <span>${l.category==='workout'?'🏋️':'👥'} ${l.type}${l.person?' · '+l.person:''}${l.duration_min?' · '+l.duration_min+' '+T.min:''}${l.distance_km?' · '+l.distance_km+' '+T.kmLabel:''}</span>
+      <span class="right"><span class="meta">${fmtDate(l.date)}</span><button class="del-btn" data-del="${l.id}" title="${T.delTitle}">✕</button></span>
     </li>`).join('');
   list.querySelectorAll('[data-del]').forEach(btn=>{
-    btn.onclick = () => {
-      state.logs = state.logs.filter(x=>x.id!==btn.dataset.del);
-      saveState();
-      renderRecent();
-      renderOverview();
-    };
+    btn.onclick = () => { state.logs = state.logs.filter(x=>x.id!==btn.dataset.del); saveState(); renderRecent(); renderPlan(); renderOverview(); };
   });
 }
 
 // ---------- overview ----------
 function renderOverview(){
-  // days since, per workout type and per person
+  const T = STRINGS[L];
   const grid = document.getElementById('sinceGrid');
   const seen = {};
   state.logs.forEach(l => {
-    const key = l.category==='workout' ? 'w:'+l.type : 'p:'+(l.person||'unbekannt');
+    const key = l.category==='workout' ? 'w:'+l.type : 'p:'+(l.person||'?');
     if(!seen[key] || l.date > seen[key].date) seen[key] = l;
   });
   const rows = Object.values(seen).sort((a,b)=> daysSince(b.date)-daysSince(a.date));
-  if(!rows.length){ grid.innerHTML = '<div class="empty">Noch keine Daten.</div>'; }
+  if(!rows.length){ grid.innerHTML = `<div class="empty">${T.emptySince}</div>`; }
   else {
     grid.innerHTML = rows.map(l => {
       const d = daysSince(l.date);
@@ -800,22 +904,16 @@ function renderOverview(){
       return `<div class="since-row">
         <span>${l.category==='workout'?'🏋️':'👥'} ${label}</span>
         <span class="right">
-          <button class="del-btn" data-del="${l.id}" title="Eintrag löschen">✕</button>
+          <button class="del-btn" data-del="${l.id}" title="${T.delTitle}">✕</button>
           <span class="days ${cls}">${formatSince(l.date)}</span>
         </span>
       </div>`;
     }).join('');
     grid.querySelectorAll('[data-del]').forEach(btn=>{
-      btn.onclick = () => {
-        state.logs = state.logs.filter(x=>x.id!==btn.dataset.del);
-        saveState();
-        renderOverview();
-        renderRecent();
-      };
+      btn.onclick = () => { state.logs = state.logs.filter(x=>x.id!==btn.dataset.del); saveState(); renderOverview(); renderRecent(); renderPlan(); };
     });
   }
 
-  // week / month stats
   const monday = mondayOf(new Date());
   const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
   function summarize(sinceDate){
@@ -836,19 +934,19 @@ function renderOverview(){
     const el = document.getElementById(elId);
     let html = '';
     const types = Object.keys(sum.byType);
-    if(!types.length){ html += '<div class="empty">Noch kein Training eingetragen.</div>'; }
+    if(!types.length){ html += `<div class="empty">${T.emptyWorkoutStats}</div>`; }
     else {
       types.forEach(t => {
         const s = sum.byType[t];
-        let parts = [s.count + (s.count===1?' Mal':' Mal')];
-        if(s.dist) parts.push(s.dist.toFixed(1)+' km');
-        if(s.dur) parts.push(s.dur+' Min');
+        let parts = [s.count+'×'];
+        if(s.dist) parts.push(s.dist.toFixed(1)+' '+T.kmLabel);
+        if(s.dur) parts.push(s.dur+' '+T.min);
         html += `<div class="stat-line"><span>${t}</span><b>${parts.join(' · ')}</b></div>`;
       });
-      html += `<div class="stat-line"><span>Trainings insgesamt</span><b>${sum.workoutCount}</b></div>`;
+      html += `<div class="stat-line"><span>${T.totalWorkouts}</span><b>${sum.workoutCount}</b></div>`;
     }
     if(sum.people.length){
-      html += `<div class="stat-line"><span>Kontakt gehabt mit</span><b>${sum.people.join(', ')}</b></div>`;
+      html += `<div class="stat-line"><span>${T.contactedWith}</span><b>${sum.people.join(', ')}</b></div>`;
     }
     el.innerHTML = html;
   }
@@ -858,12 +956,11 @@ function renderOverview(){
 
 // ---------- tabs ----------
 function render(){
-  document.getElementById('todayLabel').textContent = new Date().toLocaleDateString('de-DE',{weekday:'long', day:'2-digit', month:'2-digit'});
+  document.getElementById('todayLabel').textContent = new Date().toLocaleDateString(L==='en'?'en-US':'de-DE',{weekday:'long', day:'2-digit', month:'2-digit'});
   renderRecent();
   renderPlan();
   renderOverview();
 }
-
 document.querySelectorAll('.tabbar button').forEach(btn=>{
   btn.addEventListener('click', () => {
     document.querySelectorAll('.tabbar button').forEach(b=>b.classList.remove('active'));
@@ -872,7 +969,6 @@ document.querySelectorAll('.tabbar button').forEach(btn=>{
     document.getElementById('view-'+btn.dataset.tab).classList.add('active');
   });
 });
-
 document.getElementById('parseBtn').addEventListener('click', () => {
   const text = document.getElementById('voiceText').value.trim();
   if(!text) return;
@@ -885,7 +981,7 @@ document.getElementById('manualBtn').addEventListener('click', () => {
 setupSpeech();
 loadState();
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('sw.js').catch(()=>{ /* kein Problem, App funktioniert trotzdem */ });
+  navigator.serviceWorker.register('sw.js').catch(()=>{ /* not critical, app still works */ });
 }
 </script>
 </body>

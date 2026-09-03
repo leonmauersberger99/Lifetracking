@@ -1,6 +1,6 @@
 {
-  "name": "Logbuch",
-  "short_name": "Logbuch",
+  "name": "Life Tracking",
+  "short_name": "LifeTrack",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

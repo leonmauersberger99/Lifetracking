@@ -182,6 +182,20 @@
   .stat-line:last-child{border-bottom:none;}
   .stat-line b{font-family:'Fraunces', serif;font-weight:500;}
   .empty{color:var(--ink-soft);font-size:13.5px;font-style:italic;padding:6px 0;}
+  .lang-toggle{display:flex;gap:4px;margin-bottom:12px;}
+  .lang-toggle button{
+    padding:6px 12px;border:1px solid var(--rule);border-radius:20px;
+    background:var(--paper);color:var(--ink-soft);font-family:'Work Sans', sans-serif;
+    font-size:12.5px;font-weight:500;cursor:pointer;
+  }
+  .lang-toggle button.active{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+  .del-btn{
+    cursor:pointer;border:none;background:none;color:var(--ink-soft);
+    font-size:15px;line-height:1;padding:2px 4px;flex-shrink:0;
+  }
+  .del-btn:hover{color:var(--amber);}
+  .since-row .right{display:flex;align-items:center;gap:8px;}
+  .entry-list li .right{display:flex;align-items:center;gap:8px;}
   a.cal-link{font-size:12.5px;color:var(--teal);text-decoration:underline;}
   @media (max-width:420px){
     .row2{grid-template-columns:1fr;}
@@ -205,6 +219,10 @@
     <div class="card">
       <h2>Was hast du gemacht?</h2>
       <p class="hint">Per Mikrofon sprechen oder tippen (auf dem Handy geht auch das Mikrofon der Tastatur) — z. B. „eine Stunde Fahrrad gefahren" oder „mit Papa 30 Minuten telefoniert".</p>
+      <div class="lang-toggle" id="langToggle">
+        <button data-lang="de" class="active">Deutsch</button>
+        <button data-lang="en">English</button>
+      </div>
       <div class="mic-row">
         <button id="micBtn" title="Aufnahme starten">🎤</button>
         <span id="micStatus">Spracherkennung bereit</span>
@@ -325,14 +343,34 @@ function daysSince(iso){
   const now = new Date(); now.setHours(0,0,0,0);
   return Math.round((now-then)/86400000);
 }
-
-// ---------- voice parsing ----------
-const NUM_WORDS = {ein:1,eine:1,einen:1,einer:1,zwei:2,drei:3,vier:4,fünf:5,sechs:6,sieben:7,acht:8,neun:9,zehn:10};
-function wordToNum(w){
-  if(/^\d+([.,]\d+)?$/.test(w)) return parseFloat(w.replace(',','.'));
-  return NUM_WORDS[w.toLowerCase()] ?? null;
+function monthDayDiff(iso){
+  const from = new Date(iso+'T00:00:00');
+  const now = new Date(); now.setHours(0,0,0,0);
+  let months = (now.getFullYear()-from.getFullYear())*12 + (now.getMonth()-from.getMonth());
+  let days = now.getDate()-from.getDate();
+  if(days<0){ months--; const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0); days += prevMonthEnd.getDate(); }
+  if(months<0){ months=0; }
+  return { months, days };
 }
-const WORKOUT_PATTERNS = [
+function formatSince(iso){
+  const d = daysSince(iso);
+  if(d===0) return 'heute';
+  if(d===1) return '1 Tag';
+  if(d<=30) return d+' Tage';
+  const {months, days} = monthDayDiff(iso);
+  const parts = [];
+  if(months>0) parts.push(months+(months===1?' Monat':' Monate'));
+  if(days>0) parts.push(days+(days===1?' Tag':' Tage'));
+  return parts.length ? parts.join(' ') : d+' Tage';
+}
+
+// ---------- voice parsing: German ----------
+const NUM_WORDS_DE = {ein:1,eine:1,einen:1,einer:1,zwei:2,drei:3,vier:4,fünf:5,sechs:6,sieben:7,acht:8,neun:9,zehn:10};
+function wordToNumDE(w){
+  if(/^\d+([.,]\d+)?$/.test(w)) return parseFloat(w.replace(',','.'));
+  return NUM_WORDS_DE[w.toLowerCase()] ?? null;
+}
+const WORKOUT_PATTERNS_DE = [
   [/fahrrad|rad ?fahr|radel/i, 'Radfahren'],
   [/laufen|joggen|jogging|rennen/i, 'Laufen'],
   [/schwimm/i, 'Schwimmen'],
@@ -342,12 +380,12 @@ const WORKOUT_PATTERNS = [
   [/bein|leg day/i, 'Bein-Workout'],
   [/workout|kraft|fitnessstudio|\bgym\b|studio/i, 'Krafttraining'],
 ];
-const SOCIAL_PATTERNS = [
+const SOCIAL_PATTERNS_DE = [
   [/treffe|getroffen|treffen/i, 'Treffen'],
   [/telefonier|angerufen|\banruf|telefonat/i, 'Telefonat'],
 ];
 
-function parseEntryText(raw){
+function parseEntryTextDE(raw){
   const text = raw.trim();
   const lower = text.toLowerCase();
   let duration = null, distance = null;
@@ -356,25 +394,25 @@ function parseEntryText(raw){
   else if(/halbe stunde/.test(lower)) duration = 30;
   else {
     const hMatch = lower.match(/(\d+|ein|eine|einen|einer|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\s*stunden?/);
-    if(hMatch){ const n = wordToNum(hMatch[1]); if(n) duration = n*60; }
+    if(hMatch){ const n = wordToNumDE(hMatch[1]); if(n) duration = n*60; }
   }
   const mMatch = lower.match(/(\d+)\s*min(uten)?\b/);
   if(mMatch){ duration = (duration||0) + parseInt(mMatch[1],10); }
 
   const kmMatch = lower.match(/(\d+(?:[.,]\d+)?|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\s*(kilometer|km)\b/);
-  if(kmMatch){ const n = wordToNum(kmMatch[1]); if(n) distance = n; }
+  if(kmMatch){ const n = wordToNumDE(kmMatch[1]); if(n) distance = n; }
 
   let category = 'workout', type = 'Sonstiges', person = null;
 
   let socialHit = null;
-  for(const [re,label] of SOCIAL_PATTERNS){ if(re.test(lower)){ socialHit = label; break; } }
+  for(const [re,label] of SOCIAL_PATTERNS_DE){ if(re.test(lower)){ socialHit = label; break; } }
   if(socialHit){
     category = 'social'; type = socialHit;
     const pMatch = text.match(/mit\s+([A-Za-zÄÖÜäöüß]+)/i);
     if(pMatch) person = pMatch[1].charAt(0).toUpperCase()+pMatch[1].slice(1).toLowerCase();
   } else {
     let workoutHit = null;
-    for(const [re,label] of WORKOUT_PATTERNS){ if(re.test(lower)){ workoutHit = label; break; } }
+    for(const [re,label] of WORKOUT_PATTERNS_DE){ if(re.test(lower)){ workoutHit = label; break; } }
     if(workoutHit){ category='workout'; type=workoutHit; }
   }
 
@@ -383,6 +421,81 @@ function parseEntryText(raw){
 
   return { category, type, duration_min: duration, distance_km: distance, person, date, note: text };
 }
+
+// ---------- voice parsing: English ----------
+const NUM_WORDS_EN = {one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,a:1,an:1};
+function wordToNumEN(w){
+  if(/^\d+(\.\d+)?$/.test(w)) return parseFloat(w);
+  return NUM_WORDS_EN[w.toLowerCase()] ?? null;
+}
+const WORKOUT_PATTERNS_EN = [
+  [/bike|bicycle|cycl/i, 'Cycling'],
+  [/run|jog/i, 'Running'],
+  [/swim/i, 'Swimming'],
+  [/yoga/i, 'Yoga'],
+  [/push/i, 'Push Workout'],
+  [/pull/i, 'Pull Workout'],
+  [/leg day|legs/i, 'Leg Workout'],
+  [/workout|strength|gym/i, 'Strength Training'],
+];
+const SOCIAL_PATTERNS_EN = [
+  [/met\b|meeting|hang(ing)? out|hung out/i, 'Meetup'],
+  [/call(ed)?|phone/i, 'Phone Call'],
+];
+
+function parseEntryTextEN(raw){
+  const text = raw.trim();
+  const lower = text.toLowerCase();
+  let duration = null, distance = null;
+
+  if(/hour and a half|one and a half hours|an hour and a half/.test(lower)) duration = 90;
+  else if(/half an hour|half hour/.test(lower)) duration = 30;
+  else {
+    const hMatch = lower.match(/(\d+|one|two|three|four|five|six|seven|eight|nine|ten|an?)\s*hours?/);
+    if(hMatch){ const n = wordToNumEN(hMatch[1]); if(n) duration = n*60; }
+  }
+  const mMatch = lower.match(/(\d+)\s*min(ute)?s?\b/);
+  if(mMatch){ duration = (duration||0) + parseInt(mMatch[1],10); }
+
+  const kmMatch = lower.match(/(\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten)\s*(kilometers?|km)\b/);
+  if(kmMatch){ const n = wordToNumEN(kmMatch[1]); if(n) distance = n; }
+  else {
+    const miMatch = lower.match(/(\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten)\s*(miles?|mi)\b/);
+    if(miMatch){ const n = wordToNumEN(miMatch[1]); if(n) distance = Math.round(n*1.60934*10)/10; }
+  }
+
+  let category = 'workout', type = 'Other', person = null;
+
+  let socialHit = null;
+  for(const [re,label] of SOCIAL_PATTERNS_EN){ if(re.test(lower)){ socialHit = label; break; } }
+  if(socialHit){
+    category = 'social'; type = socialHit;
+    const pMatch = text.match(/with\s+([A-Za-z]+)/i);
+    if(pMatch) person = pMatch[1].charAt(0).toUpperCase()+pMatch[1].slice(1).toLowerCase();
+  } else {
+    let workoutHit = null;
+    for(const [re,label] of WORKOUT_PATTERNS_EN){ if(re.test(lower)){ workoutHit = label; break; } }
+    if(workoutHit){ category='workout'; type=workoutHit; }
+  }
+
+  let date = todayISO();
+  if(/yesterday/.test(lower)){ const d=new Date(); d.setDate(d.getDate()-1); date=d.toISOString().slice(0,10); }
+
+  return { category, type, duration_min: duration, distance_km: distance, person, date, note: text };
+}
+
+let voiceLang = 'de';
+function parseEntryText(raw){
+  return voiceLang === 'en' ? parseEntryTextEN(raw) : parseEntryTextDE(raw);
+}
+document.querySelectorAll('#langToggle button').forEach(btn=>{
+  btn.addEventListener('click', () => {
+    voiceLang = btn.dataset.lang;
+    document.querySelectorAll('#langToggle button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    if(recognizer) recognizer.lang = voiceLang==='en' ? 'en-US' : 'de-DE';
+  });
+});
 
 // ---------- speech recognition ----------
 let recognizer = null, recognizing = false;
@@ -396,7 +509,7 @@ function setupSpeech(){
     return;
   }
   recognizer = new SR();
-  recognizer.lang = 'de-DE';
+  recognizer.lang = voiceLang==='en' ? 'en-US' : 'de-DE';
   recognizer.interimResults = false;
   recognizer.maxAlternatives = 1;
   recognizer.onstart = () => { recognizing = true; micBtn.classList.add('recording'); micStatus.textContent = 'Höre zu…'; };
@@ -656,8 +769,16 @@ function renderRecent(){
   list.innerHTML = items.map(l => `
     <li>
       <span>${l.category==='workout'?'🏋️':'👥'} ${l.type}${l.person?' · '+l.person:''}${l.duration_min?' · '+l.duration_min+' Min':''}${l.distance_km?' · '+l.distance_km+' km':''}</span>
-      <span class="meta">${fmtDate(l.date)}</span>
+      <span class="right"><span class="meta">${fmtDate(l.date)}</span><button class="del-btn" data-del="${l.id}" title="Eintrag löschen">✕</button></span>
     </li>`).join('');
+  list.querySelectorAll('[data-del]').forEach(btn=>{
+    btn.onclick = () => {
+      state.logs = state.logs.filter(x=>x.id!==btn.dataset.del);
+      saveState();
+      renderRecent();
+      renderOverview();
+    };
+  });
 }
 
 // ---------- overview ----------
@@ -675,9 +796,23 @@ function renderOverview(){
     grid.innerHTML = rows.map(l => {
       const d = daysSince(l.date);
       const cls = d<=3 ? 'ok' : d<=9 ? 'mid' : 'overdue';
-      const label = l.category==='workout' ? l.type : l.person;
-      return `<div class="since-row"><span>${l.category==='workout'?'🏋️':'👥'} ${label}</span><span class="days ${cls}">${d===0?'heute':d+' Tage'}</span></div>`;
+      const label = l.category==='workout' ? l.type : `${l.person} · ${l.type}`;
+      return `<div class="since-row">
+        <span>${l.category==='workout'?'🏋️':'👥'} ${label}</span>
+        <span class="right">
+          <button class="del-btn" data-del="${l.id}" title="Eintrag löschen">✕</button>
+          <span class="days ${cls}">${formatSince(l.date)}</span>
+        </span>
+      </div>`;
     }).join('');
+    grid.querySelectorAll('[data-del]').forEach(btn=>{
+      btn.onclick = () => {
+        state.logs = state.logs.filter(x=>x.id!==btn.dataset.del);
+        saveState();
+        renderOverview();
+        renderRecent();
+      };
+    });
   }
 
   // week / month stats

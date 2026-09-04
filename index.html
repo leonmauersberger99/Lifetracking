@@ -61,7 +61,7 @@
   }
   .page-head h1{font-size:26px;}
   .page-head .today{font-size:13px;color:var(--ink-soft);}
-  .lang-toggle{display:flex;gap:4px;margin-bottom:20px;}
+  .lang-toggle{display:flex;gap:4px;margin-bottom:20px;flex-wrap:wrap;}
   .lang-toggle button{
     padding:6px 12px;border:1px solid var(--rule);border-radius:20px;
     background:var(--paper);color:var(--ink-soft);font-family:'Work Sans', sans-serif;
@@ -227,6 +227,7 @@
   <div class="lang-toggle" id="langToggle">
     <button data-lang="de" class="active">Deutsch</button>
     <button data-lang="en">English</button>
+    <button data-lang="nl">Nederlands</button>
   </div>
 
   <div class="tabbar">
@@ -391,6 +392,49 @@ const STRINGS = {
     planFormTime:'Time', planFormPerson:'Person (for contacts)', planFormDuration:'Duration (minutes)', planFormDistance:'Distance (km)',
     btnAdd:'Add', btnCancel:'Cancel', delTitle:'Delete entry',
     min:'min', kmLabel:'km', other:'Other',
+  },
+  nl: {
+    tabLog:'Invoeren', tabPlan:'Weekplan', tabOverview:'Overzicht',
+    logHeading:'Wat heb je gedaan?',
+    logHint:'Spreek in de microfoon of typ (op de telefoon werkt ook de microfoon van je toetsenbord) — bijv. "een uur gefietst" of "30 minuten met papa gebeld".',
+    micReady:'Spraakherkenning gereed', micListening:'Luisteren…',
+    micError:'Fout bij spraakherkenning — typ het in plaats daarvan',
+    micUnavailable:'Spraakherkenning hier niet beschikbaar — typ het in (microfoon van toetsenbord werkt ook)',
+    micRecognized:'Herkend — even controleren', savedText:'Opgeslagen ✓',
+    voicePlaceholder:'…of typ hier',
+    btnParse:'Invoer herkennen', btnManual:'Handmatig invoeren',
+    recentHeading:'Recent ingevoerd', emptyRecent:'Nog geen items.',
+    planHeading:'Weekplan',
+    planHint:'Trainingen en contacten voor deze week — gepland of al ingevoerd. Terugkerende afspraken kun je hier instellen.',
+    btnAddPlanItem:'+ Planitem toevoegen', emptyPlanDay:'Niets gepland', doneBadge:'gedaan',
+    calHeading:'Google Agenda',
+    calSetupHint:'Eenmalig instellen: vul hieronder je eigen Client-ID uit de Google Cloud Console in en verbind daarna.',
+    clientIdLabel:'Google Client-ID', btnSaveId:'Client-ID opslaan', btnConnect:'Verbinden met Google',
+    connNotYet:'Nog niet verbonden', connSavedText:'Client-ID opgeslagen — nu verbinden',
+    connLoading:'Google-login laadt nog — probeer het zo opnieuw', connMissingId:'Vul en bewaar eerst een Client-ID',
+    connUntil:'Verbonden tot', connError:'Fout:', connPleaseConnect:'Verbind eerst',
+    connAllSynced:'Deze week is al helemaal gesynchroniseerd', connSyncing:'Synchroniseren …',
+    connSyncedDone:'afspraken toegevoegd ✓', connSyncedPartial:'toegevoegd,', connSyncedFailed:'mislukt',
+    calWeekHeading:'Deze week naar je agenda',
+    calWeekHint:'Verbonden: één klik voegt de hele week toe. Niet verbonden: per item een link om handmatig te bevestigen.',
+    btnSyncWeek:'Deze week synchroniseren', emptyPlanNone:'Nog geen weekplan aangemaakt.',
+    calLinkText:'Toevoegen aan agenda', syncedText:'✓ gesynchroniseerd',
+    overviewSinceHeading:'Hoe lang geleden?', overviewWeekHeading:'Deze week', overviewMonthHeading:'Deze maand',
+    emptySince:'Nog geen gegevens.', emptyWorkoutStats:'Nog geen training ingevoerd.',
+    totalWorkouts:'Trainingen totaal', totalTrainingHours:'Trainingsuren', contactedWith:'Contact gehad met',
+    today:'vandaag', day:'dag', days:'dagen', month:'maand', months:'maanden',
+    weekdays:['Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag','Zondag'],
+    categoryWorkout:'Training', categorySocial:'Sociaal contact',
+    formTypeLabel:'Soort', formDateLabel:'Datum', formPersonLabel:'Persoon (bij contact)',
+    formDurationLabel:'Duur (minuten)', formDistanceLabel:'Afstand (km)', formCategoryLabel:'Categorie',
+    trainingTypeLabel:'Trainingsvorm', sportLabel:'Sport', customTypeOption:'Anders / zelf invullen', customTypePlaceholder:'Eigen trainingsvorm invoeren',
+    trainingTypes:['Fietsen','Hardlopen','Zwemmen','Yoga','Push Workout','Pull Workout','Beentraining','Krachttraining'],
+    filterHeading:'Trainingsvorm kiezen', filterAll:'Alle trainingsvormen',
+    btnSave:'Opslaan', btnDiscard:'Verwerpen',
+    planFormWeekday:'Weekdag', planFormType:'Soort (bijv. "Push Workout", "Afspreken", "Bellen")',
+    planFormTime:'Tijd', planFormPerson:'Persoon (bij contact)', planFormDuration:'Duur (minuten)', planFormDistance:'Afstand (km)',
+    btnAdd:'Toevoegen', btnCancel:'Annuleren', delTitle:'Item verwijderen',
+    min:'min', kmLabel:'km', other:'Overig',
   }
 };
 let L = 'de';
@@ -436,7 +480,7 @@ async function loadState(){
   const savedClientId = await storageGet('google-client-id');
   if(savedClientId){ document.getElementById('gClientId').value = savedClientId; googleClientId = savedClientId; }
   const savedLang = await storageGet('ui-lang');
-  if(savedLang === 'en' || savedLang === 'de'){
+  if(savedLang === 'en' || savedLang === 'de' || savedLang === 'nl'){
     L = savedLang;
     document.querySelectorAll('#langToggle button').forEach(b=>b.classList.toggle('active', b.dataset.lang===L));
   }
@@ -452,10 +496,10 @@ function uid(){ return Math.random().toString(36).slice(2,10); }
 function todayISO(){ return toLocalISO(new Date()); }
 function fmtDate(iso){
   const d = new Date(iso+'T00:00:00');
-  return d.toLocaleDateString(L==='en'?'en-US':'de-DE',{ day:'2-digit', month:'2-digit', year:'numeric' });
+  return d.toLocaleDateString(localeTag(),{ day:'2-digit', month:'2-digit', year:'numeric' });
 }
 function fmtShortDate(d){
-  return d.toLocaleDateString(L==='en'?'en-US':'de-DE',{ day:'2-digit', month:'2-digit' });
+  return d.toLocaleDateString(localeTag(),{ day:'2-digit', month:'2-digit' });
 }
 function mondayOf(date){
   const d = new Date(date);
@@ -468,11 +512,14 @@ function currentWeekDates(){
   const monday = mondayOf(new Date());
   return [0,1,2,3,4,5,6].map(i=>{ const d = new Date(monday); d.setDate(d.getDate()+i); return d; });
 }
+const LOCALE_MAP = { de:'de-DE', en:'en-US', nl:'nl-NL' };
+const SPEECH_LANG_MAP = { de:'de-DE', en:'en-US', nl:'nl-NL' };
+function localeTag(){ return LOCALE_MAP[L] || 'de-DE'; }
 function workoutIcon(text){
   const t = (text||'').toLowerCase();
-  if(/lauf|running|jog|renn/.test(t)) return '🏃';
-  if(/rad|fahrrad|cycl|bike|bicycle/.test(t)) return '🚴';
-  if(/schwimm|swim/.test(t)) return '🏊';
+  if(/lauf|running|jog|renn|hardlop|hardgelopen/.test(t)) return '🏃';
+  if(/rad|fahrrad|cycl|bike|bicycle|fiets/.test(t)) return '🚴';
+  if(/schwimm|swim|zwem/.test(t)) return '🏊';
   if(/yoga/.test(t)) return '🧘';
   return '🏋️';
 }
@@ -483,7 +530,7 @@ function workoutLabel(l){
 function formatHours(totalMinutes){
   const hours = Math.round((totalMinutes/60)*100)/100;
   let s = parseFloat(hours.toFixed(2)).toString();
-  if(L==='de') s = s.replace('.', ',');
+  if(L==='de' || L==='nl') s = s.replace('.', ',');
   return s+' h';
 }
 function toLocalISO(d){
@@ -622,14 +669,70 @@ function parseEntryTextEN(raw){
   if(/yesterday/.test(lower)){ const d=new Date(); d.setDate(d.getDate()-1); date=toLocalISO(d); }
   return { category, sport, type, duration_min: duration, distance_km: distance, person, date, note: text };
 }
-function parseEntryText(raw){ return L === 'en' ? parseEntryTextEN(raw) : parseEntryTextDE(raw); }
+
+// ---------- voice parsing: Dutch ----------
+const NUM_WORDS_NL = {een:1,twee:2,drie:3,vier:4,vijf:5,zes:6,zeven:7,acht:8,negen:9,tien:10};
+function wordToNumNL(w){
+  if(/^\d+([.,]\d+)?$/.test(w)) return parseFloat(w.replace(',','.'));
+  return NUM_WORDS_NL[w.toLowerCase()] ?? null;
+}
+const WORKOUT_PATTERNS_NL = [
+  [/fiets/i, 'Fietsen'],
+  [/hardlop|gerend|hardgelopen|joggen/i, 'Hardlopen'],
+  [/zwem/i, 'Zwemmen'],
+  [/yoga/i, 'Yoga'],
+  [/push/i, 'Push Workout'],
+  [/pull/i, 'Pull Workout'],
+  [/been(en)?training|leg day/i, 'Beentraining'],
+  [/workout|kracht|sportschool|\bgym\b/i, 'Krachttraining'],
+];
+const SOCIAL_PATTERNS_NL = [
+  [/afgesproken|afspreken|ontmoet/i, 'Afspreken'],
+  [/gebeld|bellen|telefoongesprek/i, 'Bellen'],
+];
+function parseEntryTextNL(raw){
+  const text = raw.trim();
+  const lower = text.toLowerCase();
+  let duration = null, distance = null;
+  if(/anderhalf uur/.test(lower)) duration = 90;
+  else if(/half uur/.test(lower)) duration = 30;
+  else {
+    const hMatch = lower.match(/(\d+|een|twee|drie|vier|vijf|zes|zeven|acht|negen|tien)\s*uur\b/);
+    if(hMatch){ const n = wordToNumNL(hMatch[1]); if(n) duration = n*60; }
+  }
+  const mMatch = lower.match(/(\d+)\s*min(uten|uut)?\b/);
+  if(mMatch){ duration = (duration||0) + parseInt(mMatch[1],10); }
+  const kmMatch = lower.match(/(\d+(?:[.,]\d+)?|een|twee|drie|vier|vijf|zes|zeven|acht|negen|tien)\s*(kilometer|km)\b/);
+  if(kmMatch){ const n = wordToNumNL(kmMatch[1]); if(n) distance = n; }
+  let category = 'workout', sport = STRINGS.nl.other, type = null, person = null;
+  let socialHit = null;
+  for(const [re,label] of SOCIAL_PATTERNS_NL){ if(re.test(lower)){ socialHit = label; break; } }
+  if(socialHit){
+    category = 'social'; type = socialHit;
+    const pMatch = text.match(/met\s+([A-Za-zÀ-ÿ]+)/i);
+    if(pMatch) person = pMatch[1].charAt(0).toUpperCase()+pMatch[1].slice(1).toLowerCase();
+  } else {
+    let workoutHit = null;
+    for(const [re,label] of WORKOUT_PATTERNS_NL){ if(re.test(lower)){ workoutHit = label; break; } }
+    if(workoutHit){ category='workout'; sport=workoutHit; }
+  }
+  let date = todayISO();
+  if(/gisteren/.test(lower)){ const d=new Date(); d.setDate(d.getDate()-1); date=toLocalISO(d); }
+  return { category, sport, type, duration_min: duration, distance_km: distance, person, date, note: text };
+}
+
+function parseEntryText(raw){
+  if(L === 'en') return parseEntryTextEN(raw);
+  if(L === 'nl') return parseEntryTextNL(raw);
+  return parseEntryTextDE(raw);
+}
 
 document.querySelectorAll('#langToggle button').forEach(btn=>{
   btn.addEventListener('click', async () => {
     L = btn.dataset.lang;
     document.querySelectorAll('#langToggle button').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
-    if(recognizer) recognizer.lang = L==='en' ? 'en-US' : 'de-DE';
+    if(recognizer) recognizer.lang = SPEECH_LANG_MAP[L] || 'de-DE';
     await storageSet('ui-lang', L);
     applyStaticTranslations();
     render();
@@ -649,7 +752,7 @@ function setupSpeech(){
     return;
   }
   recognizer = new SR();
-  recognizer.lang = L==='en' ? 'en-US' : 'de-DE';
+  recognizer.lang = SPEECH_LANG_MAP[L] || 'de-DE';
   recognizer.continuous = true;
   recognizer.interimResults = true;
   recognizer.maxAlternatives = 1;
@@ -999,7 +1102,7 @@ function ensureTokenClient(){
         if(resp.error){ setConnStatus(STRINGS[L].connError+' '+resp.error); return; }
         accessToken = resp.access_token;
         tokenExpiry = Date.now() + (resp.expires_in*1000);
-        setConnStatus(STRINGS[L].connUntil+' ' + new Date(tokenExpiry).toLocaleTimeString(L==='en'?'en-US':'de-DE',{hour:'2-digit',minute:'2-digit'}));
+        setConnStatus(STRINGS[L].connUntil+' ' + new Date(tokenExpiry).toLocaleTimeString(localeTag(),{hour:'2-digit',minute:'2-digit'}));
       }
     });
   }
@@ -1166,7 +1269,7 @@ function renderOverview(){
 
 // ---------- tabs ----------
 function render(){
-  document.getElementById('todayLabel').textContent = new Date().toLocaleDateString(L==='en'?'en-US':'de-DE',{weekday:'long', day:'2-digit', month:'2-digit'});
+  document.getElementById('todayLabel').textContent = new Date().toLocaleDateString(localeTag(),{weekday:'long', day:'2-digit', month:'2-digit'});
   renderRecent();
   renderPlan();
   renderOverview();

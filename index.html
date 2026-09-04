@@ -472,6 +472,12 @@ function workoutLabel(l){
   if(!l.sport) return l.type || STRINGS[L].other;
   return l.type ? `${l.sport} · ${l.type}` : l.sport;
 }
+function formatHours(totalMinutes){
+  const hours = Math.round((totalMinutes/60)*100)/100;
+  let s = parseFloat(hours.toFixed(2)).toString();
+  if(L==='de') s = s.replace('.', ',');
+  return s+' h';
+}
 function toLocalISO(d){
   const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
   return `${y}-${m}-${day}`;
@@ -639,24 +645,33 @@ function setupSpeech(){
   recognizer.continuous = true;
   recognizer.interimResults = true;
   recognizer.maxAlternatives = 1;
-  let silenceTimer = null;
+  let silenceTimer = null, sessionBaseText = '';
   const SILENCE_MS = 5000;
   function resetSilenceTimer(){
     clearTimeout(silenceTimer);
     silenceTimer = setTimeout(() => { if(recognizing) recognizer.stop(); }, SILENCE_MS);
   }
-  recognizer.onstart = () => { recognizing = true; micBtn.classList.add('recording'); micStatus.textContent = STRINGS[L].micListening; resetSilenceTimer(); };
+  recognizer.onstart = () => {
+    recognizing = true;
+    micBtn.classList.add('recording');
+    micStatus.textContent = STRINGS[L].micListening;
+    sessionBaseText = document.getElementById('voiceText').value;
+    resetSilenceTimer();
+  };
   recognizer.onerror = (e) => { if(e.error !== 'no-speech' && e.error !== 'aborted') micStatus.textContent = STRINGS[L].micError; };
   recognizer.onend = () => { recognizing = false; clearTimeout(silenceTimer); micBtn.classList.remove('recording'); if(micStatus.textContent===STRINGS[L].micListening) micStatus.textContent = STRINGS[L].micReady; };
   recognizer.onresult = (event) => {
     resetSilenceTimer();
+    // Rebuild the full final transcript for this recording session from scratch each time —
+    // some Android/Chrome versions redeliver already-final results, which caused duplicated words.
     let finalText = '';
-    for(let i=event.resultIndex; i<event.results.length; i++){
-      if(event.results[i].isFinal) finalText += event.results[i][0].transcript;
+    for(let i=0; i<event.results.length; i++){
+      if(event.results[i].isFinal) finalText += event.results[i][0].transcript + ' ';
     }
-    if(finalText.trim()){
+    finalText = finalText.trim();
+    if(finalText){
       const ta = document.getElementById('voiceText');
-      ta.value = (ta.value ? ta.value+' ' : '') + finalText.trim();
+      ta.value = sessionBaseText ? (sessionBaseText + ' ' + finalText) : finalText;
       micStatus.textContent = STRINGS[L].micRecognized;
     }
   };
@@ -1110,13 +1125,13 @@ function renderOverview(){
         const safeId = elId+'-'+sp.replace(/[^a-zA-Z0-9]/g,'_');
         let parts = [s.count+'×'];
         if(s.dist) parts.push(s.dist.toFixed(1)+' '+T.kmLabel);
-        if(s.dur) parts.push(s.dur+' '+T.min);
+        if(s.dur) parts.push(formatHours(s.dur));
         const ttKeys = Object.keys(s.byTrainingType);
         const detailRows = ttKeys.map(tt => {
           const ts = s.byTrainingType[tt];
           const ttParts = [ts.count+'×'];
           if(ts.dist) ttParts.push(ts.dist.toFixed(1)+' '+T.kmLabel);
-          if(ts.dur) ttParts.push(ts.dur+' '+T.min);
+          if(ts.dur) ttParts.push(formatHours(ts.dur));
           return `<div class="stat-detail-row"><span>${tt}</span><span>${ttParts.join(' · ')}</span></div>`;
         }).join('');
         html += `<div class="stat-line clickable" data-toggle="${safeId}"><span>${sp}</span><b>${parts.join(' · ')}</b></div>

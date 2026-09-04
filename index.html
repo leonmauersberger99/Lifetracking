@@ -291,6 +291,10 @@
       <div class="since-grid" id="sinceGrid"></div>
     </div>
     <div class="card">
+      <label data-i18n="filterHeading">Trainingsart auswählen</label>
+      <select id="statsTypeFilter"></select>
+    </div>
+    <div class="card">
       <h2 data-i18n="overviewWeekHeading">Diese Woche</h2>
       <div id="weekStats"></div>
     </div>
@@ -337,6 +341,9 @@ const STRINGS = {
     categoryWorkout:'Training', categorySocial:'Sozialer Kontakt',
     formTypeLabel:'Art', formDateLabel:'Datum', formPersonLabel:'Person (bei Kontakt)',
     formDurationLabel:'Dauer (Minuten)', formDistanceLabel:'Distanz (km)', formCategoryLabel:'Kategorie',
+    trainingTypeLabel:'Trainingsart', customTypeOption:'Sonstiges / eigene Eingabe', customTypePlaceholder:'Eigene Trainingsart eingeben',
+    trainingTypes:['Radfahren','Laufen','Schwimmen','Yoga','Push Workout','Pull Workout','Bein-Workout','Krafttraining'],
+    filterHeading:'Trainingsart auswählen', filterAll:'Alle Trainingsarten',
     btnSave:'Speichern', btnDiscard:'Verwerfen',
     planFormWeekday:'Wochentag', planFormType:'Art (z. B. „Push Workout", „Treffen", „Telefonat")',
     planFormTime:'Uhrzeit', planFormPerson:'Person (bei Kontakt)', planFormDuration:'Dauer (Minuten)', planFormDistance:'Distanz (km)',
@@ -377,6 +384,9 @@ const STRINGS = {
     categoryWorkout:'Workout', categorySocial:'Social contact',
     formTypeLabel:'Type', formDateLabel:'Date', formPersonLabel:'Person (for contacts)',
     formDurationLabel:'Duration (minutes)', formDistanceLabel:'Distance (km)', formCategoryLabel:'Category',
+    trainingTypeLabel:'Training Type', customTypeOption:'Other / custom', customTypePlaceholder:'Enter custom training type',
+    trainingTypes:['Cycling','Running','Swimming','Yoga','Push Workout','Pull Workout','Leg Workout','Strength Training'],
+    filterHeading:'Filter by training type', filterAll:'All training types',
     btnSave:'Save', btnDiscard:'Discard',
     planFormWeekday:'Weekday', planFormType:'Type (e.g. "Push Workout", "Meetup", "Phone Call")',
     planFormTime:'Time', planFormPerson:'Person (for contacts)', planFormDuration:'Duration (minutes)', planFormDistance:'Distance (km)',
@@ -385,6 +395,7 @@ const STRINGS = {
   }
 };
 let L = 'de';
+let statsTypeFilter = '__all__';
 let state = { logs: [], plan: [], synced: {} };
 let editingDraft = null;
 
@@ -623,16 +634,29 @@ function setupSpeech(){
   }
   recognizer = new SR();
   recognizer.lang = L==='en' ? 'en-US' : 'de-DE';
-  recognizer.interimResults = false;
+  recognizer.continuous = true;
+  recognizer.interimResults = true;
   recognizer.maxAlternatives = 1;
-  recognizer.onstart = () => { recognizing = true; micBtn.classList.add('recording'); micStatus.textContent = STRINGS[L].micListening; };
-  recognizer.onerror = () => { micStatus.textContent = STRINGS[L].micError; };
-  recognizer.onend = () => { recognizing = false; micBtn.classList.remove('recording'); if(micStatus.textContent===STRINGS[L].micListening) micStatus.textContent = STRINGS[L].micReady; };
+  let silenceTimer = null;
+  const SILENCE_MS = 5000;
+  function resetSilenceTimer(){
+    clearTimeout(silenceTimer);
+    silenceTimer = setTimeout(() => { if(recognizing) recognizer.stop(); }, SILENCE_MS);
+  }
+  recognizer.onstart = () => { recognizing = true; micBtn.classList.add('recording'); micStatus.textContent = STRINGS[L].micListening; resetSilenceTimer(); };
+  recognizer.onerror = (e) => { if(e.error !== 'no-speech' && e.error !== 'aborted') micStatus.textContent = STRINGS[L].micError; };
+  recognizer.onend = () => { recognizing = false; clearTimeout(silenceTimer); micBtn.classList.remove('recording'); if(micStatus.textContent===STRINGS[L].micListening) micStatus.textContent = STRINGS[L].micReady; };
   recognizer.onresult = (event) => {
-    const text = event.results[0][0].transcript;
-    const ta = document.getElementById('voiceText');
-    ta.value = (ta.value ? ta.value+' ' : '') + text;
-    micStatus.textContent = STRINGS[L].micRecognized;
+    resetSilenceTimer();
+    let finalText = '';
+    for(let i=event.resultIndex; i<event.results.length; i++){
+      if(event.results[i].isFinal) finalText += event.results[i][0].transcript;
+    }
+    if(finalText.trim()){
+      const ta = document.getElementById('voiceText');
+      ta.value = (ta.value ? ta.value+' ' : '') + finalText.trim();
+      micStatus.textContent = STRINGS[L].micRecognized;
+    }
   };
   micBtn.addEventListener('click', () => {
     if(recognizing){ recognizer.stop(); return; }
@@ -641,6 +665,44 @@ function setupSpeech(){
 }
 
 // ---------- draft UI ----------
+function typeFieldHTML(category, currentType){
+  const T = STRINGS[L];
+  if(category === 'workout'){
+    const options = T.trainingTypes;
+    const matched = options.includes(currentType);
+    const selVal = matched ? currentType : '__custom__';
+    return `
+      <label>${T.trainingTypeLabel}</label>
+      <select id="d_type_select">
+        ${options.map(o=>`<option value="${o}" ${selVal===o?'selected':''}>${o}</option>`).join('')}
+        <option value="__custom__" ${selVal==='__custom__'?'selected':''}>${T.customTypeOption}</option>
+      </select>
+      <input type="text" id="d_type_custom" placeholder="${T.customTypePlaceholder}" style="margin-top:6px;${selVal==='__custom__'?'':'display:none;'}" value="${matched?'':(currentType||'')}">
+    `;
+  }
+  return `<label>${T.formTypeLabel}</label><input type="text" id="d_type" value="${currentType||''}">`;
+}
+function wireTypeFieldEvents(){
+  const sel = document.getElementById('d_type_select');
+  if(sel){
+    sel.addEventListener('change', () => {
+      const custom = document.getElementById('d_type_custom');
+      if(custom) custom.style.display = sel.value==='__custom__' ? '' : 'none';
+    });
+  }
+}
+function getTypeValue(){
+  const sel = document.getElementById('d_type_select');
+  if(sel){
+    if(sel.value === '__custom__'){
+      const custom = document.getElementById('d_type_custom');
+      return (custom && custom.value.trim()) || STRINGS[L].other;
+    }
+    return sel.value;
+  }
+  const input = document.getElementById('d_type');
+  return (input && input.value) || STRINGS[L].other;
+}
 function showDraft(draft){
   editingDraft = draft;
   const T = STRINGS[L];
@@ -648,8 +710,7 @@ function showDraft(draft){
   area.innerHTML = `
     <div class="draft-box">
       <span class="tag ${draft.category}">${draft.category==='workout'?T.categoryWorkout:T.categorySocial}</span>
-      <label>${T.formTypeLabel}</label>
-      <input type="text" id="d_type" value="${draft.type||''}">
+      <div id="d_type_wrap">${typeFieldHTML(draft.category, draft.type)}</div>
       <div class="row2">
         <div>
           <label>${T.formDateLabel}</label>
@@ -681,6 +742,11 @@ function showDraft(draft){
       </div>
     </div>
   `;
+  wireTypeFieldEvents();
+  document.getElementById('d_category').addEventListener('change', (e) => {
+    document.getElementById('d_type_wrap').innerHTML = typeFieldHTML(e.target.value, '');
+    wireTypeFieldEvents();
+  });
   document.getElementById('saveDraftBtn').onclick = saveDraft;
   document.getElementById('discardDraftBtn').onclick = () => { area.innerHTML=''; editingDraft=null; };
 }
@@ -689,7 +755,7 @@ function saveDraft(){
   const entry = {
     id: isEdit ? editingDraft.id : uid(),
     category: document.getElementById('d_category').value,
-    type: document.getElementById('d_type').value || STRINGS[L].other,
+    type: getTypeValue(),
     date: document.getElementById('d_date').value || todayISO(),
     person: document.getElementById('d_person').value || null,
     duration_min: document.getElementById('d_duration').value ? parseFloat(document.getElementById('d_duration').value) : null,
@@ -1037,9 +1103,20 @@ function renderOverview(){
 
   const monday = mondayOf(new Date());
   const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
+
+  // build the training-type filter dropdown from types actually logged
+  const filterSelect = document.getElementById('statsTypeFilter');
+  const loggedTypes = [...new Set(state.logs.filter(l=>l.category==='workout').map(l=>l.type))].sort();
+  const prevValue = statsTypeFilter;
+  filterSelect.innerHTML = `<option value="__all__">${T.filterAll}</option>` +
+    loggedTypes.map(t => `<option value="${t}" ${t===prevValue?'selected':''}>${t}</option>`).join('');
+  if(!loggedTypes.includes(prevValue)) statsTypeFilter = '__all__';
+  filterSelect.value = statsTypeFilter;
+  filterSelect.onchange = () => { statsTypeFilter = filterSelect.value; renderOverview(); };
+
   function summarize(sinceDate){
     const inRange = state.logs.filter(l => new Date(l.date+'T00:00:00') >= sinceDate);
-    const workouts = inRange.filter(l=>l.category==='workout');
+    const workouts = inRange.filter(l=>l.category==='workout' && (statsTypeFilter==='__all__' || l.type===statsTypeFilter));
     const social = inRange.filter(l=>l.category==='social');
     const byType = {};
     workouts.forEach(w => {

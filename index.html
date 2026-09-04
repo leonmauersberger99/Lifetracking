@@ -180,6 +180,16 @@
   .plan-item.logged{background:var(--teal-soft);}
   .plan-item .done-badge{font-size:11px;color:var(--teal);font-weight:500;margin-left:8px;}
   .plan-item .del{cursor:pointer;color:var(--ink-soft);font-size:16px;border:none;background:none;}
+  .plan-item{touch-action:pan-y;user-select:none;-webkit-user-select:none;}
+  .plan-item.logged .entry-main{cursor:pointer;}
+  .plan-item.dragging-source{opacity:0.35;}
+  .plan-day.drop-target{outline:2px dashed var(--teal);outline-offset:4px;border-radius:10px;}
+  .drag-clone{
+    position:fixed;z-index:1000;pointer-events:none;opacity:0.96;
+    box-shadow:0 8px 20px rgba(0,0,0,0.28);transform:scale(1.03);
+  }
+  .entry-list li .entry-main{cursor:pointer;flex:1;}
+  .since-row .label-main{cursor:pointer;}
   .since-grid{display:flex;flex-direction:column;gap:8px;}
   .since-row{
     display:flex;justify-content:space-between;align-items:center;
@@ -430,7 +440,7 @@ async function saveState(){
 
 // ---------- helpers ----------
 function uid(){ return Math.random().toString(36).slice(2,10); }
-function todayISO(){ const d=new Date(); return d.toISOString().slice(0,10); }
+function todayISO(){ return toLocalISO(new Date()); }
 function fmtDate(iso){
   const d = new Date(iso+'T00:00:00');
   return d.toLocaleDateString(L==='en'?'en-US':'de-DE',{ day:'2-digit', month:'2-digit', year:'numeric' });
@@ -448,6 +458,10 @@ function mondayOf(date){
 function currentWeekDates(){
   const monday = mondayOf(new Date());
   return [0,1,2,3,4,5,6].map(i=>{ const d = new Date(monday); d.setDate(d.getDate()+i); return d; });
+}
+function toLocalISO(d){
+  const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
 }
 function daysSince(iso){
   const then = new Date(iso+'T00:00:00');
@@ -523,7 +537,7 @@ function parseEntryTextDE(raw){
     if(workoutHit){ category='workout'; type=workoutHit; }
   }
   let date = todayISO();
-  if(/gestern/.test(lower)){ const d=new Date(); d.setDate(d.getDate()-1); date=d.toISOString().slice(0,10); }
+  if(/gestern/.test(lower)){ const d=new Date(); d.setDate(d.getDate()-1); date=toLocalISO(d); }
   return { category, type, duration_min: duration, distance_km: distance, person, date, note: text };
 }
 
@@ -578,7 +592,7 @@ function parseEntryTextEN(raw){
     if(workoutHit){ category='workout'; type=workoutHit; }
   }
   let date = todayISO();
-  if(/yesterday/.test(lower)){ const d=new Date(); d.setDate(d.getDate()-1); date=d.toISOString().slice(0,10); }
+  if(/yesterday/.test(lower)){ const d=new Date(); d.setDate(d.getDate()-1); date=toLocalISO(d); }
   return { category, type, duration_min: duration, distance_km: distance, person, date, note: text };
 }
 function parseEntryText(raw){ return L === 'en' ? parseEntryTextEN(raw) : parseEntryTextDE(raw); }
@@ -671,8 +685,9 @@ function showDraft(draft){
   document.getElementById('discardDraftBtn').onclick = () => { area.innerHTML=''; editingDraft=null; };
 }
 function saveDraft(){
+  const isEdit = !!(editingDraft && editingDraft.id);
   const entry = {
-    id: uid(),
+    id: isEdit ? editingDraft.id : uid(),
     category: document.getElementById('d_category').value,
     type: document.getElementById('d_type').value || STRINGS[L].other,
     date: document.getElementById('d_date').value || todayISO(),
@@ -680,14 +695,29 @@ function saveDraft(){
     duration_min: document.getElementById('d_duration').value ? parseFloat(document.getElementById('d_duration').value) : null,
     distance_km: document.getElementById('d_distance').value ? parseFloat(document.getElementById('d_distance').value) : null,
   };
-  state.logs.unshift(entry);
+  if(isEdit){
+    const idx = state.logs.findIndex(l=>l.id===entry.id);
+    if(idx>-1) state.logs[idx] = entry; else state.logs.unshift(entry);
+  } else {
+    state.logs.unshift(entry);
+  }
   saveState();
+  editingDraft = null;
   document.getElementById('draftArea').innerHTML = '';
   document.getElementById('voiceText').value = '';
   document.getElementById('micStatus').textContent = STRINGS[L].savedText;
   renderRecent();
   renderPlan();
   renderOverview();
+}
+function editEntry(id){
+  const entry = state.logs.find(l=>l.id===id);
+  if(!entry) return;
+  document.querySelectorAll('.tabbar button').forEach(b=>b.classList.toggle('active', b.dataset.tab==='log'));
+  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active', v.id==='view-log'));
+  showDraft({ ...entry });
+  const area = document.getElementById('draftArea');
+  if(area) area.scrollIntoView({behavior:'smooth', block:'center'});
 }
 
 // ---------- plan ----------
@@ -698,23 +728,25 @@ function renderPlanDays(){
   const weekDates = currentWeekDates();
   T.weekdays.forEach((name, idx) => {
     const date = weekDates[idx];
-    const dateISO = date.toISOString().slice(0,10);
+    const dateISO = toLocalISO(date);
     const planItems = state.plan.filter(p=>p.day===idx);
     const loggedItems = state.logs.filter(l=>l.date===dateISO);
     const div = document.createElement('div');
     div.className = 'plan-day';
+    div.dataset.dayIdx = idx;
+    div.dataset.dateIso = dateISO;
     let html = `<div class="day-name"><span>${name}</span><span class="date">${fmtShortDate(date)}</span></div>`;
     if(!planItems.length && !loggedItems.length){
       html += `<div class="empty">${T.emptyPlanDay}</div>`;
     } else {
       html += planItems.map(it => `
-        <div class="plan-item" data-id="${it.id}">
-          <span>${it.category==='workout'?'🏋️':'👥'} ${it.type}${it.person?' · '+it.person:''}${it.duration_min?' · '+it.duration_min+' '+T.min:''}${it.distance_km?' · '+it.distance_km+' '+T.kmLabel:''}${it.time?' · '+it.time:''}</span>
+        <div class="plan-item" data-kind="plan" data-item-id="${it.id}">
+          <span class="entry-main">${it.category==='workout'?'🏋️':'👥'} ${it.type}${it.person?' · '+it.person:''}${it.duration_min?' · '+it.duration_min+' '+T.min:''}${it.distance_km?' · '+it.distance_km+' '+T.kmLabel:''}${it.time?' · '+it.time:''}</span>
           <button class="del" data-del-plan="${it.id}">✕</button>
         </div>`).join('');
       html += loggedItems.map(l => `
-        <div class="plan-item logged" data-id="${l.id}">
-          <span>${l.category==='workout'?'🏋️':'👥'} ${l.type}${l.person?' · '+l.person:''}${l.duration_min?' · '+l.duration_min+' '+T.min:''}${l.distance_km?' · '+l.distance_km+' '+T.kmLabel:''}<span class="done-badge">✓ ${T.doneBadge}</span></span>
+        <div class="plan-item logged" data-kind="log" data-item-id="${l.id}">
+          <span class="entry-main">${l.category==='workout'?'🏋️':'👥'} ${l.type}${l.person?' · '+l.person:''}${l.duration_min?' · '+l.duration_min+' '+T.min:''}${l.distance_km?' · '+l.distance_km+' '+T.kmLabel:''}<span class="done-badge">✓ ${T.doneBadge}</span></span>
           <button class="del" data-del-log="${l.id}">✕</button>
         </div>`).join('');
     }
@@ -722,10 +754,93 @@ function renderPlanDays(){
     container.appendChild(div);
   });
   container.querySelectorAll('[data-del-plan]').forEach(btn=>{
-    btn.onclick = () => { state.plan = state.plan.filter(p=>p.id!==btn.dataset.delPlan); saveState(); renderPlan(); };
+    btn.onclick = (e) => { e.stopPropagation(); state.plan = state.plan.filter(p=>p.id!==btn.dataset.delPlan); saveState(); renderPlan(); };
   });
   container.querySelectorAll('[data-del-log]').forEach(btn=>{
-    btn.onclick = () => { state.logs = state.logs.filter(l=>l.id!==btn.dataset.delLog); saveState(); renderPlan(); renderRecent(); renderOverview(); };
+    btn.onclick = (e) => { e.stopPropagation(); state.logs = state.logs.filter(l=>l.id!==btn.dataset.delLog); saveState(); renderPlan(); renderRecent(); renderOverview(); };
+  });
+  attachDragHandlers();
+}
+
+// ---------- edit-by-tap and move-by-long-press for plan items ----------
+function moveItemToDay(kind, id, targetDayIdx, targetDateIso){
+  if(kind==='plan'){
+    const item = state.plan.find(p=>p.id===id);
+    if(item && item.day!==targetDayIdx){ item.day = targetDayIdx; saveState(); renderPlan(); }
+  } else if(kind==='log'){
+    const item = state.logs.find(l=>l.id===id);
+    if(item && item.date!==targetDateIso){ item.date = targetDateIso; saveState(); renderPlan(); renderRecent(); renderOverview(); }
+  }
+}
+function attachDragHandlers(){
+  const LONG_PRESS_MS = 420;
+  const MOVE_CANCEL_PX = 12;
+  document.querySelectorAll('#planDays .plan-item[data-item-id]').forEach(el=>{
+    let timer=null, startX=0, startY=0, dragging=false, clone=null, longPressFired=false, pid=null;
+
+    function startDrag(e){
+      dragging = true;
+      try{ el.setPointerCapture(e.pointerId); }catch(err){}
+      el.classList.add('dragging-source');
+      const rect = el.getBoundingClientRect();
+      clone = el.cloneNode(true);
+      clone.classList.add('drag-clone');
+      clone.style.width = rect.width+'px';
+      clone.style.left = (e.clientX - rect.width/2) + 'px';
+      clone.style.top = (e.clientY - 18) + 'px';
+      document.body.appendChild(clone);
+      if(navigator.vibrate){ try{ navigator.vibrate(15); }catch(err){} }
+    }
+    function moveDrag(e){
+      const rect = el.getBoundingClientRect();
+      clone.style.left = (e.clientX - rect.width/2) + 'px';
+      clone.style.top = (e.clientY - 18) + 'px';
+      document.querySelectorAll('.plan-day.drop-target').forEach(d=>d.classList.remove('drop-target'));
+      clone.style.display = 'none';
+      const under = document.elementFromPoint(e.clientX, e.clientY);
+      clone.style.display = '';
+      const dayEl = under && under.closest ? under.closest('.plan-day') : null;
+      if(dayEl) dayEl.classList.add('drop-target');
+    }
+    function endDrag(e){
+      const under1 = clone ? (clone.style.display='none', document.elementFromPoint(e.clientX, e.clientY)) : null;
+      if(clone) clone.style.display='';
+      const dayEl = under1 && under1.closest ? under1.closest('.plan-day') : null;
+      document.querySelectorAll('.plan-day.drop-target').forEach(d=>d.classList.remove('drop-target'));
+      if(clone){ clone.remove(); clone=null; }
+      el.classList.remove('dragging-source');
+      dragging = false;
+      if(dayEl){
+        moveItemToDay(el.dataset.kind, el.dataset.itemId, parseInt(dayEl.dataset.dayIdx,10), dayEl.dataset.dateIso);
+      }
+    }
+    function cancelDrag(){
+      if(clone){ clone.remove(); clone=null; }
+      el.classList.remove('dragging-source');
+      document.querySelectorAll('.plan-day.drop-target').forEach(d=>d.classList.remove('drop-target'));
+      dragging = false;
+    }
+
+    el.addEventListener('pointerdown', (e)=>{
+      if(e.target.closest('button')) return;
+      if(e.pointerType==='mouse' && e.button!==0) return;
+      startX=e.clientX; startY=e.clientY; longPressFired=false; pid=e.pointerId;
+      clearTimeout(timer);
+      timer = setTimeout(()=>{ longPressFired=true; startDrag(e); }, LONG_PRESS_MS);
+    });
+    el.addEventListener('pointermove', (e)=>{
+      if(dragging){ moveDrag(e); e.preventDefault(); return; }
+      const dx = Math.abs(e.clientX-startX), dy = Math.abs(e.clientY-startY);
+      if(dx>MOVE_CANCEL_PX || dy>MOVE_CANCEL_PX){ clearTimeout(timer); }
+    });
+    el.addEventListener('pointerup', (e)=>{
+      clearTimeout(timer);
+      if(dragging){ endDrag(e); }
+      else if(!longPressFired && !e.target.closest('button') && el.dataset.kind==='log'){
+        editEntry(el.dataset.itemId);
+      }
+    });
+    el.addEventListener('pointercancel', ()=>{ clearTimeout(timer); if(dragging) cancelDrag(); });
   });
 }
 document.addEventListener('click', (e) => {
@@ -778,7 +893,7 @@ function openPlanForm(){
 }
 function thisWeekOccurrences(){
   const monday = mondayOf(new Date());
-  const weekKey = monday.toISOString().slice(0,10);
+  const weekKey = toLocalISO(monday);
   return state.plan.map(p => {
     let date = new Date(monday); date.setDate(date.getDate()+p.day);
     if(date < new Date(new Date().toDateString())) date.setDate(date.getDate()+7);
@@ -877,9 +992,12 @@ function renderRecent(){
   if(!items.length){ list.innerHTML = `<div class="empty">${T.emptyRecent}</div>`; return; }
   list.innerHTML = items.map(l => `
     <li>
-      <span>${l.category==='workout'?'🏋️':'👥'} ${l.type}${l.person?' · '+l.person:''}${l.duration_min?' · '+l.duration_min+' '+T.min:''}${l.distance_km?' · '+l.distance_km+' '+T.kmLabel:''}</span>
+      <span class="entry-main" data-edit="${l.id}">${l.category==='workout'?'🏋️':'👥'} ${l.type}${l.person?' · '+l.person:''}${l.duration_min?' · '+l.duration_min+' '+T.min:''}${l.distance_km?' · '+l.distance_km+' '+T.kmLabel:''}</span>
       <span class="right"><span class="meta">${fmtDate(l.date)}</span><button class="del-btn" data-del="${l.id}" title="${T.delTitle}">✕</button></span>
     </li>`).join('');
+  list.querySelectorAll('[data-edit]').forEach(span=>{
+    span.onclick = () => editEntry(span.dataset.edit);
+  });
   list.querySelectorAll('[data-del]').forEach(btn=>{
     btn.onclick = () => { state.logs = state.logs.filter(x=>x.id!==btn.dataset.del); saveState(); renderRecent(); renderPlan(); renderOverview(); };
   });
@@ -902,13 +1020,16 @@ function renderOverview(){
       const cls = d<=3 ? 'ok' : d<=9 ? 'mid' : 'overdue';
       const label = l.category==='workout' ? l.type : `${l.person} · ${l.type}`;
       return `<div class="since-row">
-        <span>${l.category==='workout'?'🏋️':'👥'} ${label}</span>
+        <span class="label-main" data-edit="${l.id}">${l.category==='workout'?'🏋️':'👥'} ${label}</span>
         <span class="right">
           <button class="del-btn" data-del="${l.id}" title="${T.delTitle}">✕</button>
           <span class="days ${cls}">${formatSince(l.date)}</span>
         </span>
       </div>`;
     }).join('');
+    grid.querySelectorAll('[data-edit]').forEach(span=>{
+      span.onclick = () => editEntry(span.dataset.edit);
+    });
     grid.querySelectorAll('[data-del]').forEach(btn=>{
       btn.onclick = () => { state.logs = state.logs.filter(x=>x.id!==btn.dataset.del); saveState(); renderOverview(); renderRecent(); renderPlan(); };
     });

@@ -334,7 +334,7 @@ const STRINGS = {
     calLinkText:'Zum Kalender', syncedText:'✓ synchronisiert',
     overviewSinceHeading:'Wie lange ist es her?', overviewWeekHeading:'Diese Woche', overviewMonthHeading:'Dieser Monat',
     emptySince:'Noch keine Daten.', emptyWorkoutStats:'Noch kein Training eingetragen.',
-    totalWorkouts:'Trainings insgesamt', contactedWith:'Kontakt gehabt mit',
+    totalWorkouts:'Trainings insgesamt', totalTrainingHours:'Trainingsstunden', contactedWith:'Kontakt gehabt mit',
     today:'heute', day:'Tag', days:'Tage', month:'Monat', months:'Monate',
     weekdays:['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag'],
     categoryWorkout:'Training', categorySocial:'Sozialer Kontakt',
@@ -377,7 +377,7 @@ const STRINGS = {
     calLinkText:'Add to calendar', syncedText:'✓ synced',
     overviewSinceHeading:'How long has it been?', overviewWeekHeading:'This week', overviewMonthHeading:'This month',
     emptySince:'No data yet.', emptyWorkoutStats:'No workouts logged yet.',
-    totalWorkouts:'Total workouts', contactedWith:'In touch with',
+    totalWorkouts:'Total workouts', totalTrainingHours:'Training hours', contactedWith:'In touch with',
     today:'today', day:'day', days:'days', month:'month', months:'months',
     weekdays:['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],
     categoryWorkout:'Workout', categorySocial:'Social contact',
@@ -467,6 +467,14 @@ function mondayOf(date){
 function currentWeekDates(){
   const monday = mondayOf(new Date());
   return [0,1,2,3,4,5,6].map(i=>{ const d = new Date(monday); d.setDate(d.getDate()+i); return d; });
+}
+function workoutIcon(text){
+  const t = (text||'').toLowerCase();
+  if(/lauf|running|jog|renn/.test(t)) return '🏃';
+  if(/rad|fahrrad|cycl|bike|bicycle/.test(t)) return '🚴';
+  if(/schwimm|swim/.test(t)) return '🏊';
+  if(/yoga/.test(t)) return '🧘';
+  return '🏋️';
 }
 function workoutLabel(l){
   if(!l.sport) return l.type || STRINGS[L].other;
@@ -797,12 +805,12 @@ function renderPlanDays(){
     } else {
       html += planItems.map(it => `
         <div class="plan-item" data-kind="plan" data-item-id="${it.id}">
-          <span class="entry-main">${it.category==='workout'?'🏋️':'👥'} ${it.type}${it.person?' · '+it.person:''}${it.duration_min?' · '+it.duration_min+' '+T.min:''}${it.distance_km?' · '+it.distance_km+' '+T.kmLabel:''}${it.time?' · '+it.time:''}</span>
+          <span class="entry-main">${it.category==='workout'?workoutIcon(it.type):'👥'} ${it.type}${it.person?' · '+it.person:''}${it.duration_min?' · '+it.duration_min+' '+T.min:''}${it.distance_km?' · '+it.distance_km+' '+T.kmLabel:''}${it.time?' · '+it.time:''}</span>
           <button class="del" data-del-plan="${it.id}">✕</button>
         </div>`).join('');
       html += loggedItems.map(l => `
         <div class="plan-item logged" data-kind="log" data-item-id="${l.id}">
-          <span class="entry-main">${l.category==='workout'?'🏋️':'👥'} ${l.category==='workout'?workoutLabel(l):l.type}${l.person?' · '+l.person:''}${l.duration_min?' · '+l.duration_min+' '+T.min:''}${l.distance_km?' · '+l.distance_km+' '+T.kmLabel:''}<span class="done-badge">✓ ${T.doneBadge}</span></span>
+          <span class="entry-main">${l.category==='workout'?workoutIcon(l.sport||l.type):'👥'} ${l.category==='workout'?workoutLabel(l):l.type}${l.person?' · '+l.person:''}${l.duration_min?' · '+l.duration_min+' '+T.min:''}${l.distance_km?' · '+l.distance_km+' '+T.kmLabel:''}<span class="done-badge">✓ ${T.doneBadge}</span></span>
           <button class="del" data-del-log="${l.id}">✕</button>
         </div>`).join('');
     }
@@ -1048,7 +1056,7 @@ function renderRecent(){
   if(!items.length){ list.innerHTML = `<div class="empty">${T.emptyRecent}</div>`; return; }
   list.innerHTML = items.map(l => `
     <li>
-      <span class="entry-main" data-edit="${l.id}">${l.category==='workout'?'🏋️':'👥'} ${l.category==='workout'?workoutLabel(l):l.type}${l.person?' · '+l.person:''}${l.duration_min?' · '+l.duration_min+' '+T.min:''}${l.distance_km?' · '+l.distance_km+' '+T.kmLabel:''}</span>
+      <span class="entry-main" data-edit="${l.id}">${l.category==='workout'?workoutIcon(l.sport||l.type):'👥'} ${l.category==='workout'?workoutLabel(l):l.type}${l.person?' · '+l.person:''}${l.duration_min?' · '+l.duration_min+' '+T.min:''}${l.distance_km?' · '+l.distance_km+' '+T.kmLabel:''}</span>
       <span class="right"><span class="meta">${fmtDate(l.date)}</span><button class="del-btn" data-del="${l.id}" title="${T.delTitle}">✕</button></span>
     </li>`).join('');
   list.querySelectorAll('[data-edit]').forEach(span=>{
@@ -1076,7 +1084,7 @@ function renderOverview(){
       const cls = d<=3 ? 'ok' : d<=9 ? 'mid' : 'overdue';
       const label = l.category==='workout' ? (l.sport||l.type) : `${l.person} · ${l.type}`;
       return `<div class="since-row">
-        <span class="label-main" data-edit="${l.id}">${l.category==='workout'?'🏋️':'👥'} ${label}</span>
+        <span class="label-main" data-edit="${l.id}">${l.category==='workout'?workoutIcon(l.sport||l.type):'👥'} ${label}</span>
         <span class="right">
           <button class="del-btn" data-del="${l.id}" title="${T.delTitle}">✕</button>
           <span class="days ${cls}">${formatSince(l.date)}</span>
@@ -1134,9 +1142,11 @@ function renderOverview(){
           if(ts.dur) ttParts.push(formatHours(ts.dur));
           return `<div class="stat-detail-row"><span>${tt}</span><span>${ttParts.join(' · ')}</span></div>`;
         }).join('');
-        html += `<div class="stat-line clickable" data-toggle="${safeId}"><span>${sp}</span><b>${parts.join(' · ')}</b></div>
+        html += `<div class="stat-line clickable" data-toggle="${safeId}"><span>${workoutIcon(sp)} ${sp}</span><b>${parts.join(' · ')}</b></div>
           <div class="stat-detail" id="${safeId}" style="display:none;">${detailRows}</div>`;
       });
+      const totalMinutes = sports.reduce((acc,sp)=> acc + sum.bySport[sp].dur, 0);
+      html += `<div class="stat-line"><span>${T.totalTrainingHours}</span><b>${formatHours(totalMinutes)}</b></div>`;
       html += `<div class="stat-line"><span>${T.totalWorkouts}</span><b>${sum.workoutCount}</b></div>`;
     }
     if(sum.people.length){

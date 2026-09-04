@@ -340,7 +340,7 @@ const STRINGS = {
     categoryWorkout:'Training', categorySocial:'Sozialer Kontakt',
     formTypeLabel:'Art', formDateLabel:'Datum', formPersonLabel:'Person (bei Kontakt)',
     formDurationLabel:'Dauer (Minuten)', formDistanceLabel:'Distanz (km)', formCategoryLabel:'Kategorie',
-    trainingTypeLabel:'Trainingsart', customTypeOption:'Sonstiges / eigene Eingabe', customTypePlaceholder:'Eigene Trainingsart eingeben',
+    trainingTypeLabel:'Trainingsart', sportLabel:'Sportart', customTypeOption:'Sonstiges / eigene Eingabe', customTypePlaceholder:'Eigene Trainingsart eingeben',
     trainingTypes:['Radfahren','Laufen','Schwimmen','Yoga','Push Workout','Pull Workout','Bein-Workout','Krafttraining'],
     filterHeading:'Trainingsart auswählen', filterAll:'Alle Trainingsarten',
     btnSave:'Speichern', btnDiscard:'Verwerfen',
@@ -383,7 +383,7 @@ const STRINGS = {
     categoryWorkout:'Workout', categorySocial:'Social contact',
     formTypeLabel:'Type', formDateLabel:'Date', formPersonLabel:'Person (for contacts)',
     formDurationLabel:'Duration (minutes)', formDistanceLabel:'Distance (km)', formCategoryLabel:'Category',
-    trainingTypeLabel:'Training Type', customTypeOption:'Other / custom', customTypePlaceholder:'Enter custom training type',
+    trainingTypeLabel:'Training Type', sportLabel:'Sport', customTypeOption:'Other / custom', customTypePlaceholder:'Enter custom training type',
     trainingTypes:['Cycling','Running','Swimming','Yoga','Push Workout','Pull Workout','Leg Workout','Strength Training'],
     filterHeading:'Filter by training type', filterAll:'All training types',
     btnSave:'Save', btnDiscard:'Discard',
@@ -468,6 +468,10 @@ function currentWeekDates(){
   const monday = mondayOf(new Date());
   return [0,1,2,3,4,5,6].map(i=>{ const d = new Date(monday); d.setDate(d.getDate()+i); return d; });
 }
+function workoutLabel(l){
+  if(!l.sport) return l.type || STRINGS[L].other;
+  return l.type ? `${l.sport} · ${l.type}` : l.sport;
+}
 function toLocalISO(d){
   const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
   return `${y}-${m}-${day}`;
@@ -533,7 +537,7 @@ function parseEntryTextDE(raw){
   if(mMatch){ duration = (duration||0) + parseInt(mMatch[1],10); }
   const kmMatch = lower.match(/(\d+(?:[.,]\d+)?|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\s*(kilometer|km)\b/);
   if(kmMatch){ const n = wordToNumDE(kmMatch[1]); if(n) distance = n; }
-  let category = 'workout', type = STRINGS.de.other, person = null;
+  let category = 'workout', sport = STRINGS.de.other, type = null, person = null;
   let socialHit = null;
   for(const [re,label] of SOCIAL_PATTERNS_DE){ if(re.test(lower)){ socialHit = label; break; } }
   if(socialHit){
@@ -543,11 +547,11 @@ function parseEntryTextDE(raw){
   } else {
     let workoutHit = null;
     for(const [re,label] of WORKOUT_PATTERNS_DE){ if(re.test(lower)){ workoutHit = label; break; } }
-    if(workoutHit){ category='workout'; type=workoutHit; }
+    if(workoutHit){ category='workout'; sport=workoutHit; }
   }
   let date = todayISO();
   if(/gestern/.test(lower)){ const d=new Date(); d.setDate(d.getDate()-1); date=toLocalISO(d); }
-  return { category, type, duration_min: duration, distance_km: distance, person, date, note: text };
+  return { category, sport, type, duration_min: duration, distance_km: distance, person, date, note: text };
 }
 
 // ---------- voice parsing: English ----------
@@ -588,7 +592,7 @@ function parseEntryTextEN(raw){
     const miMatch = lower.match(/(\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten)\s*(miles?|mi)\b/);
     if(miMatch){ const n = wordToNumEN(miMatch[1]); if(n) distance = Math.round(n*1.60934*10)/10; }
   }
-  let category = 'workout', type = STRINGS.en.other, person = null;
+  let category = 'workout', sport = STRINGS.en.other, type = null, person = null;
   let socialHit = null;
   for(const [re,label] of SOCIAL_PATTERNS_EN){ if(re.test(lower)){ socialHit = label; break; } }
   if(socialHit){
@@ -598,11 +602,11 @@ function parseEntryTextEN(raw){
   } else {
     let workoutHit = null;
     for(const [re,label] of WORKOUT_PATTERNS_EN){ if(re.test(lower)){ workoutHit = label; break; } }
-    if(workoutHit){ category='workout'; type=workoutHit; }
+    if(workoutHit){ category='workout'; sport=workoutHit; }
   }
   let date = todayISO();
   if(/yesterday/.test(lower)){ const d=new Date(); d.setDate(d.getDate()-1); date=toLocalISO(d); }
-  return { category, type, duration_min: duration, distance_km: distance, person, date, note: text };
+  return { category, sport, type, duration_min: duration, distance_km: distance, person, date, note: text };
 }
 function parseEntryText(raw){ return L === 'en' ? parseEntryTextEN(raw) : parseEntryTextDE(raw); }
 
@@ -677,6 +681,8 @@ function formFieldsHTML(category, draft){
     `;
   }
   return `
+    <label>${T.sportLabel}</label>
+    <input type="text" id="d_sport" value="${d.sport||''}">
     <label>${T.trainingTypeLabel}</label>
     <input type="text" id="d_type" value="${d.type||''}">
     <label>${T.formDateLabel}</label>
@@ -714,6 +720,7 @@ function showDraft(draft){
 function saveDraft(){
   const isEdit = !!(editingDraft && editingDraft.id);
   const category = document.getElementById('d_category').value;
+  const sportEl = document.getElementById('d_sport');
   const typeEl = document.getElementById('d_type');
   const dateEl = document.getElementById('d_date');
   const personEl = document.getElementById('d_person');
@@ -722,7 +729,8 @@ function saveDraft(){
   const entry = {
     id: isEdit ? editingDraft.id : uid(),
     category,
-    type: (typeEl && typeEl.value) || STRINGS[L].other,
+    sport: sportEl ? (sportEl.value || STRINGS[L].other) : null,
+    type: (typeEl && typeEl.value) || (category==='workout' ? null : STRINGS[L].other),
     date: (dateEl && dateEl.value) || todayISO(),
     person: personEl ? (personEl.value || null) : null,
     duration_min: (durationEl && durationEl.value) ? parseFloat(durationEl.value) : null,
@@ -779,7 +787,7 @@ function renderPlanDays(){
         </div>`).join('');
       html += loggedItems.map(l => `
         <div class="plan-item logged" data-kind="log" data-item-id="${l.id}">
-          <span class="entry-main">${l.category==='workout'?'🏋️':'👥'} ${l.type}${l.person?' · '+l.person:''}${l.duration_min?' · '+l.duration_min+' '+T.min:''}${l.distance_km?' · '+l.distance_km+' '+T.kmLabel:''}<span class="done-badge">✓ ${T.doneBadge}</span></span>
+          <span class="entry-main">${l.category==='workout'?'🏋️':'👥'} ${l.category==='workout'?workoutLabel(l):l.type}${l.person?' · '+l.person:''}${l.duration_min?' · '+l.duration_min+' '+T.min:''}${l.distance_km?' · '+l.distance_km+' '+T.kmLabel:''}<span class="done-badge">✓ ${T.doneBadge}</span></span>
           <button class="del" data-del-log="${l.id}">✕</button>
         </div>`).join('');
     }
@@ -1025,7 +1033,7 @@ function renderRecent(){
   if(!items.length){ list.innerHTML = `<div class="empty">${T.emptyRecent}</div>`; return; }
   list.innerHTML = items.map(l => `
     <li>
-      <span class="entry-main" data-edit="${l.id}">${l.category==='workout'?'🏋️':'👥'} ${l.type}${l.person?' · '+l.person:''}${l.duration_min?' · '+l.duration_min+' '+T.min:''}${l.distance_km?' · '+l.distance_km+' '+T.kmLabel:''}</span>
+      <span class="entry-main" data-edit="${l.id}">${l.category==='workout'?'🏋️':'👥'} ${l.category==='workout'?workoutLabel(l):l.type}${l.person?' · '+l.person:''}${l.duration_min?' · '+l.duration_min+' '+T.min:''}${l.distance_km?' · '+l.distance_km+' '+T.kmLabel:''}</span>
       <span class="right"><span class="meta">${fmtDate(l.date)}</span><button class="del-btn" data-del="${l.id}" title="${T.delTitle}">✕</button></span>
     </li>`).join('');
   list.querySelectorAll('[data-edit]').forEach(span=>{
@@ -1042,7 +1050,7 @@ function renderOverview(){
   const grid = document.getElementById('sinceGrid');
   const seen = {};
   state.logs.forEach(l => {
-    const key = l.category==='workout' ? 'w:'+l.type : 'p:'+(l.person||'?');
+    const key = l.category==='workout' ? 'w:'+(l.sport||l.type) : 'p:'+(l.person||'?');
     if(!seen[key] || l.date > seen[key].date) seen[key] = l;
   });
   const rows = Object.values(seen).sort((a,b)=> daysSince(b.date)-daysSince(a.date));
@@ -1051,7 +1059,7 @@ function renderOverview(){
     grid.innerHTML = rows.map(l => {
       const d = daysSince(l.date);
       const cls = d<=3 ? 'ok' : d<=9 ? 'mid' : 'overdue';
-      const label = l.category==='workout' ? l.type : `${l.person} · ${l.type}`;
+      const label = l.category==='workout' ? (l.sport||l.type) : `${l.person} · ${l.type}`;
       return `<div class="since-row">
         <span class="label-main" data-edit="${l.id}">${l.category==='workout'?'🏋️':'👥'} ${label}</span>
         <span class="right">
@@ -1075,38 +1083,43 @@ function renderOverview(){
     const inRange = state.logs.filter(l => new Date(l.date+'T00:00:00') >= sinceDate);
     const workouts = inRange.filter(l=>l.category==='workout');
     const social = inRange.filter(l=>l.category==='social');
-    const byType = {};
+    const bySport = {};
     workouts.forEach(w => {
-      byType[w.type] = byType[w.type] || {count:0, dur:0, dist:0, entries:[]};
-      byType[w.type].count++;
-      byType[w.type].dur += w.duration_min||0;
-      byType[w.type].dist += w.distance_km||0;
-      byType[w.type].entries.push(w);
+      const sportKey = w.sport || STRINGS[L].other;
+      bySport[sportKey] = bySport[sportKey] || {count:0, dur:0, dist:0, byTrainingType:{}};
+      bySport[sportKey].count++;
+      bySport[sportKey].dur += w.duration_min||0;
+      bySport[sportKey].dist += w.distance_km||0;
+      const ttKey = w.type || STRINGS[L].other;
+      const tt = bySport[sportKey].byTrainingType[ttKey] = bySport[sportKey].byTrainingType[ttKey] || {count:0, dur:0, dist:0};
+      tt.count++;
+      tt.dur += w.duration_min||0;
+      tt.dist += w.distance_km||0;
     });
     const people = [...new Set(social.map(s=>s.person).filter(Boolean))];
-    return {byType, workoutCount: workouts.length, people};
+    return {bySport, workoutCount: workouts.length, people};
   }
   function renderStats(elId, sum){
     const el = document.getElementById(elId);
     let html = '';
-    const types = Object.keys(sum.byType);
-    if(!types.length){ html += `<div class="empty">${T.emptyWorkoutStats}</div>`; }
+    const sports = Object.keys(sum.bySport);
+    if(!sports.length){ html += `<div class="empty">${T.emptyWorkoutStats}</div>`; }
     else {
-      types.forEach(t => {
-        const s = sum.byType[t];
-        const safeId = elId+'-'+t.replace(/[^a-zA-Z0-9]/g,'_');
+      sports.forEach(sp => {
+        const s = sum.bySport[sp];
+        const safeId = elId+'-'+sp.replace(/[^a-zA-Z0-9]/g,'_');
         let parts = [s.count+'×'];
         if(s.dist) parts.push(s.dist.toFixed(1)+' '+T.kmLabel);
         if(s.dur) parts.push(s.dur+' '+T.min);
-        const detailRows = s.entries
-          .slice().sort((a,b)=> b.date.localeCompare(a.date))
-          .map(e => {
-            const bits = [];
-            if(e.duration_min) bits.push(e.duration_min+' '+T.min);
-            if(e.distance_km) bits.push(e.distance_km+' '+T.kmLabel);
-            return `<div class="stat-detail-row"><span>${fmtDate(e.date)}</span><span>${bits.join(' · ')}</span></div>`;
-          }).join('');
-        html += `<div class="stat-line clickable" data-toggle="${safeId}"><span>${t}</span><b>${parts.join(' · ')}</b></div>
+        const ttKeys = Object.keys(s.byTrainingType);
+        const detailRows = ttKeys.map(tt => {
+          const ts = s.byTrainingType[tt];
+          const ttParts = [ts.count+'×'];
+          if(ts.dist) ttParts.push(ts.dist.toFixed(1)+' '+T.kmLabel);
+          if(ts.dur) ttParts.push(ts.dur+' '+T.min);
+          return `<div class="stat-detail-row"><span>${tt}</span><span>${ttParts.join(' · ')}</span></div>`;
+        }).join('');
+        html += `<div class="stat-line clickable" data-toggle="${safeId}"><span>${sp}</span><b>${parts.join(' · ')}</b></div>
           <div class="stat-detail" id="${safeId}" style="display:none;">${detailRows}</div>`;
       });
       html += `<div class="stat-line"><span>${T.totalWorkouts}</span><b>${sum.workoutCount}</b></div>`;

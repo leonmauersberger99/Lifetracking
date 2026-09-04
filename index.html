@@ -208,6 +208,9 @@
   .stat-line{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--rule);font-size:14px;}
   .stat-line:last-child{border-bottom:none;}
   .stat-line b{font-family:'Fraunces', serif;font-weight:500;}
+  .stat-line.clickable{cursor:pointer;}
+  .stat-detail{padding:2px 0 8px 12px;border-bottom:1px solid var(--rule);}
+  .stat-detail-row{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-soft);padding:3px 0;}
   .empty{color:var(--ink-soft);font-size:13.5px;font-style:italic;padding:6px 0;}
   a.cal-link{font-size:12.5px;color:var(--teal);text-decoration:underline;}
   @media (max-width:420px){
@@ -289,10 +292,6 @@
     <div class="card">
       <h2 data-i18n="overviewSinceHeading">Wie lange ist es her?</h2>
       <div class="since-grid" id="sinceGrid"></div>
-    </div>
-    <div class="card">
-      <label data-i18n="filterHeading">Trainingsart auswählen</label>
-      <select id="statsTypeFilter"></select>
     </div>
     <div class="card">
       <h2 data-i18n="overviewWeekHeading">Diese Woche</h2>
@@ -395,7 +394,6 @@ const STRINGS = {
   }
 };
 let L = 'de';
-let statsTypeFilter = '__all__';
 let state = { logs: [], plan: [], synced: {} };
 let editingDraft = null;
 
@@ -665,43 +663,29 @@ function setupSpeech(){
 }
 
 // ---------- draft UI ----------
-function typeFieldHTML(category, currentType){
+function formFieldsHTML(category, draft){
   const T = STRINGS[L];
-  if(category === 'workout'){
-    const options = T.trainingTypes;
-    const matched = options.includes(currentType);
-    const selVal = matched ? currentType : '__custom__';
+  const d = draft || {};
+  if(category === 'social'){
     return `
-      <label>${T.trainingTypeLabel}</label>
-      <select id="d_type_select">
-        ${options.map(o=>`<option value="${o}" ${selVal===o?'selected':''}>${o}</option>`).join('')}
-        <option value="__custom__" ${selVal==='__custom__'?'selected':''}>${T.customTypeOption}</option>
-      </select>
-      <input type="text" id="d_type_custom" placeholder="${T.customTypePlaceholder}" style="margin-top:6px;${selVal==='__custom__'?'':'display:none;'}" value="${matched?'':(currentType||'')}">
+      <label>${T.formTypeLabel}</label>
+      <input type="text" id="d_type" value="${d.type||''}">
+      <label>${T.formDateLabel}</label>
+      <input type="date" id="d_date" value="${d.date||todayISO()}">
+      <label>${T.formPersonLabel}</label>
+      <input type="text" id="d_person" value="${d.person||''}">
     `;
   }
-  return `<label>${T.formTypeLabel}</label><input type="text" id="d_type" value="${currentType||''}">`;
-}
-function wireTypeFieldEvents(){
-  const sel = document.getElementById('d_type_select');
-  if(sel){
-    sel.addEventListener('change', () => {
-      const custom = document.getElementById('d_type_custom');
-      if(custom) custom.style.display = sel.value==='__custom__' ? '' : 'none';
-    });
-  }
-}
-function getTypeValue(){
-  const sel = document.getElementById('d_type_select');
-  if(sel){
-    if(sel.value === '__custom__'){
-      const custom = document.getElementById('d_type_custom');
-      return (custom && custom.value.trim()) || STRINGS[L].other;
-    }
-    return sel.value;
-  }
-  const input = document.getElementById('d_type');
-  return (input && input.value) || STRINGS[L].other;
+  return `
+    <label>${T.trainingTypeLabel}</label>
+    <input type="text" id="d_type" value="${d.type||''}">
+    <label>${T.formDateLabel}</label>
+    <input type="date" id="d_date" value="${d.date||todayISO()}">
+    <label>${T.formDurationLabel}</label>
+    <input type="number" id="d_duration" value="${d.duration_min ?? ''}">
+    <label>${T.formDistanceLabel}</label>
+    <input type="number" step="0.1" id="d_distance" value="${d.distance_km ?? ''}">
+  `;
 }
 function showDraft(draft){
   editingDraft = draft;
@@ -709,57 +693,40 @@ function showDraft(draft){
   const area = document.getElementById('draftArea');
   area.innerHTML = `
     <div class="draft-box">
-      <span class="tag ${draft.category}">${draft.category==='workout'?T.categoryWorkout:T.categorySocial}</span>
-      <div id="d_type_wrap">${typeFieldHTML(draft.category, draft.type)}</div>
-      <div class="row2">
-        <div>
-          <label>${T.formDateLabel}</label>
-          <input type="date" id="d_date" value="${draft.date}">
-        </div>
-        <div>
-          <label>${T.formPersonLabel}</label>
-          <input type="text" id="d_person" value="${draft.person||''}">
-        </div>
-      </div>
-      <div class="row2">
-        <div>
-          <label>${T.formDurationLabel}</label>
-          <input type="number" id="d_duration" value="${draft.duration_min ?? ''}">
-        </div>
-        <div>
-          <label>${T.formDistanceLabel}</label>
-          <input type="number" step="0.1" id="d_distance" value="${draft.distance_km ?? ''}">
-        </div>
-      </div>
       <label>${T.formCategoryLabel}</label>
       <select id="d_category">
         <option value="workout" ${draft.category==='workout'?'selected':''}>${T.categoryWorkout}</option>
         <option value="social" ${draft.category==='social'?'selected':''}>${T.categorySocial}</option>
       </select>
+      <div id="d_fields_wrap">${formFieldsHTML(draft.category, draft)}</div>
       <div class="btn-row">
         <button class="btn" id="saveDraftBtn">${T.btnSave}</button>
         <button class="btn secondary" id="discardDraftBtn">${T.btnDiscard}</button>
       </div>
     </div>
   `;
-  wireTypeFieldEvents();
   document.getElementById('d_category').addEventListener('change', (e) => {
-    document.getElementById('d_type_wrap').innerHTML = typeFieldHTML(e.target.value, '');
-    wireTypeFieldEvents();
+    document.getElementById('d_fields_wrap').innerHTML = formFieldsHTML(e.target.value, {});
   });
   document.getElementById('saveDraftBtn').onclick = saveDraft;
   document.getElementById('discardDraftBtn').onclick = () => { area.innerHTML=''; editingDraft=null; };
 }
 function saveDraft(){
   const isEdit = !!(editingDraft && editingDraft.id);
+  const category = document.getElementById('d_category').value;
+  const typeEl = document.getElementById('d_type');
+  const dateEl = document.getElementById('d_date');
+  const personEl = document.getElementById('d_person');
+  const durationEl = document.getElementById('d_duration');
+  const distanceEl = document.getElementById('d_distance');
   const entry = {
     id: isEdit ? editingDraft.id : uid(),
-    category: document.getElementById('d_category').value,
-    type: getTypeValue(),
-    date: document.getElementById('d_date').value || todayISO(),
-    person: document.getElementById('d_person').value || null,
-    duration_min: document.getElementById('d_duration').value ? parseFloat(document.getElementById('d_duration').value) : null,
-    distance_km: document.getElementById('d_distance').value ? parseFloat(document.getElementById('d_distance').value) : null,
+    category,
+    type: (typeEl && typeEl.value) || STRINGS[L].other,
+    date: (dateEl && dateEl.value) || todayISO(),
+    person: personEl ? (personEl.value || null) : null,
+    duration_min: (durationEl && durationEl.value) ? parseFloat(durationEl.value) : null,
+    distance_km: (distanceEl && distanceEl.value) ? parseFloat(distanceEl.value) : null,
   };
   if(isEdit){
     const idx = state.logs.findIndex(l=>l.id===entry.id);
@@ -1104,26 +1071,17 @@ function renderOverview(){
   const monday = mondayOf(new Date());
   const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
 
-  // build the training-type filter dropdown from types actually logged
-  const filterSelect = document.getElementById('statsTypeFilter');
-  const loggedTypes = [...new Set(state.logs.filter(l=>l.category==='workout').map(l=>l.type))].sort();
-  const prevValue = statsTypeFilter;
-  filterSelect.innerHTML = `<option value="__all__">${T.filterAll}</option>` +
-    loggedTypes.map(t => `<option value="${t}" ${t===prevValue?'selected':''}>${t}</option>`).join('');
-  if(!loggedTypes.includes(prevValue)) statsTypeFilter = '__all__';
-  filterSelect.value = statsTypeFilter;
-  filterSelect.onchange = () => { statsTypeFilter = filterSelect.value; renderOverview(); };
-
   function summarize(sinceDate){
     const inRange = state.logs.filter(l => new Date(l.date+'T00:00:00') >= sinceDate);
-    const workouts = inRange.filter(l=>l.category==='workout' && (statsTypeFilter==='__all__' || l.type===statsTypeFilter));
+    const workouts = inRange.filter(l=>l.category==='workout');
     const social = inRange.filter(l=>l.category==='social');
     const byType = {};
     workouts.forEach(w => {
-      byType[w.type] = byType[w.type] || {count:0, dur:0, dist:0};
+      byType[w.type] = byType[w.type] || {count:0, dur:0, dist:0, entries:[]};
       byType[w.type].count++;
       byType[w.type].dur += w.duration_min||0;
       byType[w.type].dist += w.distance_km||0;
+      byType[w.type].entries.push(w);
     });
     const people = [...new Set(social.map(s=>s.person).filter(Boolean))];
     return {byType, workoutCount: workouts.length, people};
@@ -1136,10 +1094,20 @@ function renderOverview(){
     else {
       types.forEach(t => {
         const s = sum.byType[t];
+        const safeId = elId+'-'+t.replace(/[^a-zA-Z0-9]/g,'_');
         let parts = [s.count+'×'];
         if(s.dist) parts.push(s.dist.toFixed(1)+' '+T.kmLabel);
         if(s.dur) parts.push(s.dur+' '+T.min);
-        html += `<div class="stat-line"><span>${t}</span><b>${parts.join(' · ')}</b></div>`;
+        const detailRows = s.entries
+          .slice().sort((a,b)=> b.date.localeCompare(a.date))
+          .map(e => {
+            const bits = [];
+            if(e.duration_min) bits.push(e.duration_min+' '+T.min);
+            if(e.distance_km) bits.push(e.distance_km+' '+T.kmLabel);
+            return `<div class="stat-detail-row"><span>${fmtDate(e.date)}</span><span>${bits.join(' · ')}</span></div>`;
+          }).join('');
+        html += `<div class="stat-line clickable" data-toggle="${safeId}"><span>${t}</span><b>${parts.join(' · ')}</b></div>
+          <div class="stat-detail" id="${safeId}" style="display:none;">${detailRows}</div>`;
       });
       html += `<div class="stat-line"><span>${T.totalWorkouts}</span><b>${sum.workoutCount}</b></div>`;
     }
@@ -1147,6 +1115,12 @@ function renderOverview(){
       html += `<div class="stat-line"><span>${T.contactedWith}</span><b>${sum.people.join(', ')}</b></div>`;
     }
     el.innerHTML = html;
+    el.querySelectorAll('[data-toggle]').forEach(row=>{
+      row.onclick = () => {
+        const detail = document.getElementById(row.dataset.toggle);
+        if(detail) detail.style.display = detail.style.display==='none' ? 'block' : 'none';
+      };
+    });
   }
   renderStats('weekStats', summarize(monday));
   renderStats('monthStats', summarize(monthStart));

@@ -68,6 +68,18 @@
     font-size:12.5px;font-weight:500;cursor:pointer;
   }
   .lang-toggle button.active{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+  .timer-bar{
+    display:flex;flex-direction:column;align-items:center;gap:2px;
+    margin-bottom:18px;padding:8px 14px;
+    background:var(--paper-raised);border:1px solid var(--rule);border-radius:10px;
+  }
+  .timer-row{
+    display:flex;justify-content:space-between;align-items:baseline;width:100%;
+    font-family:'Fraunces', serif;font-size:15px;font-variant-numeric:tabular-nums;
+  }
+  .timer-row .timer-day{color:var(--teal);}
+  .timer-row .timer-week{color:var(--plum);}
+  .timer-year{font-family:'Work Sans', sans-serif;font-size:11px;color:var(--ink-soft);}
   .tabbar{
     display:flex;
     gap:4px;
@@ -230,6 +242,14 @@
     <button data-lang="nl">Nederlands</button>
   </div>
 
+  <div class="timer-bar">
+    <div class="timer-row">
+      <span class="timer-day" id="dayTimer">00:00:00</span>
+      <span class="timer-week" id="weekTimer">0 – 00:00:00</span>
+    </div>
+    <div class="timer-year" id="yearWeeksLeft"></div>
+  </div>
+
   <div class="tabbar">
     <button data-tab="log" class="active" data-i18n="tabLog">Eintragen</button>
     <button data-tab="plan" data-i18n="tabPlan">Wochenplan</button>
@@ -348,7 +368,7 @@ const STRINGS = {
     planFormWeekday:'Wochentag', planFormType:'Art (z. B. „Push Workout", „Treffen", „Telefonat")',
     planFormTime:'Uhrzeit', planFormPerson:'Person (bei Kontakt)', planFormDuration:'Dauer (Minuten)', planFormDistance:'Distanz (km)',
     btnAdd:'Hinzufügen', btnCancel:'Abbrechen', delTitle:'Eintrag löschen',
-    min:'Min', kmLabel:'km', other:'Sonstiges',
+    min:'Min', kmLabel:'km', other:'Sonstiges', weeksLeftInYear:'Wochen verbleibend in diesem Jahr',
   },
   en: {
     tabLog:'Log', tabPlan:'This Week', tabOverview:'Overview',
@@ -391,7 +411,7 @@ const STRINGS = {
     planFormWeekday:'Weekday', planFormType:'Type (e.g. "Push Workout", "Meetup", "Phone Call")',
     planFormTime:'Time', planFormPerson:'Person (for contacts)', planFormDuration:'Duration (minutes)', planFormDistance:'Distance (km)',
     btnAdd:'Add', btnCancel:'Cancel', delTitle:'Delete entry',
-    min:'min', kmLabel:'km', other:'Other',
+    min:'min', kmLabel:'km', other:'Other', weeksLeftInYear:'weeks left this year',
   },
   nl: {
     tabLog:'Invoeren', tabPlan:'Weekplan', tabOverview:'Overzicht',
@@ -434,7 +454,7 @@ const STRINGS = {
     planFormWeekday:'Weekdag', planFormType:'Soort (bijv. "Push Workout", "Afspreken", "Bellen")',
     planFormTime:'Tijd', planFormPerson:'Persoon (bij contact)', planFormDuration:'Duur (minuten)', planFormDistance:'Afstand (km)',
     btnAdd:'Toevoegen', btnCancel:'Annuleren', delTitle:'Item verwijderen',
-    min:'min', kmLabel:'km', other:'Overig',
+    min:'min', kmLabel:'km', other:'Overig', weeksLeftInYear:'weken over dit jaar',
   }
 };
 let L = 'de';
@@ -532,6 +552,41 @@ function formatHours(totalMinutes){
   let s = parseFloat(hours.toFixed(2)).toString();
   if(L==='de' || L==='nl') s = s.replace('.', ',');
   return s+' h';
+}
+function msUntilNextMidnight(){
+  const now = new Date();
+  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate()+1, 0,0,0,0);
+  return next - now;
+}
+function formatCountdown(ms){
+  if(ms<0) ms = 0;
+  const totalSec = Math.floor(ms/1000);
+  const h = Math.floor(totalSec/3600);
+  const m = Math.floor((totalSec%3600)/60);
+  const s = totalSec%60;
+  return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+}
+function weeksRemainingInYear(){
+  const now = new Date(); now.setHours(0,0,0,0);
+  const endOfYear = new Date(now.getFullYear(), 11, 31);
+  const daysLeft = Math.round((endOfYear - now)/86400000) + 1;
+  return Math.ceil(daysLeft/7);
+}
+function updateTimers(){
+  const dayTimerEl = document.getElementById('dayTimer');
+  const weekTimerEl = document.getElementById('weekTimer');
+  const yearEl = document.getElementById('yearWeeksLeft');
+  if(!dayTimerEl) return;
+  const msLeft = msUntilNextMidnight();
+  const countdown = formatCountdown(msLeft);
+  dayTimerEl.textContent = countdown;
+  const now = new Date();
+  const mon0 = (now.getDay()+6)%7;
+  const daysFull = 6 - mon0;
+  const T = STRINGS[L];
+  const dayWord = daysFull===1 ? T.day : T.days;
+  weekTimerEl.textContent = `${daysFull} ${dayWord} – ${countdown}`;
+  yearEl.textContent = `${weeksRemainingInYear()} ${T.weeksLeftInYear}`;
 }
 function toLocalISO(d){
   const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
@@ -736,6 +791,7 @@ document.querySelectorAll('#langToggle button').forEach(btn=>{
     await storageSet('ui-lang', L);
     applyStaticTranslations();
     render();
+    updateTimers();
   });
 });
 
@@ -1293,6 +1349,8 @@ document.getElementById('manualBtn').addEventListener('click', () => {
 
 setupSpeech();
 loadState();
+updateTimers();
+setInterval(updateTimers, 1000);
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('sw.js').catch(()=>{ /* not critical, app still works */ });
 }
